@@ -1,0 +1,614 @@
+"use client"
+
+import type React from "react"
+
+import { useEffect, useState, useRef } from "react"
+import { useRouter } from "next/navigation"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import * as z from "zod"
+import { Button } from "../components/ui/button"
+import { Input } from "../components/ui/input"
+import { Textarea } from "../components/ui/textarea"
+import { Label } from "../components/ui/label"
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "../components/ui/command"
+import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../components/ui/dialog"
+import { Check, X, Loader2, Upload, Plus } from "lucide-react"
+import { Badge } from "../components/ui/badge"
+import { cn } from "../../lib/utils"
+import { toast } from "../components/ui/use-toast"
+
+const CATEGORIES = [
+  "Cultural",
+  "Gastronómico",
+  "Histórico",
+  "Aventura",
+  "Naturaleza",
+  "Arquitectónico",
+  "Artístico",
+  "Nocturno",
+  "Familiar",
+]
+
+const LANGUAGES = ["Español", "Inglés", "Francés", "Alemán", "Italiano", "Portugués", "Chino", "Japonés", "Ruso"]
+
+const tourSchema = z.object({
+  title: z.string().min(1, "El título es requerido"),
+  category: z.string().min(1, "La categoría es requerida"),
+  description: z.string().min(1, "La descripción es requerida"),
+  duration: z.string().min(1, "La duración es requerida"),
+  price: z.object({
+    value: z.number().min(0, "El precio debe ser un número positivo"),
+    basedOnTips: z.boolean().optional(),
+  }),
+  meetingPoint: z.string().min(1, "El punto de encuentro es requerido"),
+  language: z.array(z.string()).min(1, "Debes seleccionar al menos un idioma"),
+  images: z.array(z.instanceof(File)).optional(),
+})
+
+type TourFormValues = z.infer<typeof tourSchema>
+
+interface ImagePreview {
+  file: File
+  url: string
+}
+
+export default function TourForm({ params }: { params: { action: string } }) {
+  const router = useRouter()
+  const isEditing = params.action !== "new"
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [selectedLanguages, setSelectedLanguages] = useState<string[]>([])
+  const [imageFiles, setImageFiles] = useState<File[]>([])
+  const [imagePreviews, setImagePreviews] = useState<string[]>([])
+  const [languagePopoverOpen, setLanguagePopoverOpen] = useState(false)
+
+  // Estados para el diálogo de confirmación de imagen
+  const [isImageDialogOpen, setIsImageDialogOpen] = useState(false)
+  const [pendingImages, setPendingImages] = useState<ImagePreview[]>([])
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
+
+  // Referencia al input de archivo
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors },
+    reset,
+  } = useForm<TourFormValues>({
+    resolver: zodResolver(tourSchema),
+    defaultValues: {
+      title: "",
+      category: "",
+      description: "",
+      duration: "",
+      price: {
+        value: 0,
+        basedOnTips: false,
+      },
+      meetingPoint: "",
+      language: [],
+      images: [],
+    },
+  })
+
+  // Watch for changes to update UI
+  const watchedLanguages = watch("language")
+
+  // Load tour data if editing
+  useEffect(() => {
+    if (isEditing) {
+      // Fetch tour data
+      const fetchTour = async () => {
+        try {
+          const response = await fetch(`/api/tours/${params.action}`)
+          if (!response.ok) throw new Error("No se pudo cargar el tour")
+
+          const tourData = await response.json()
+
+          // Set form values
+          reset({
+            title: tourData.title,
+            category: tourData.category,
+            description: tourData.description,
+            duration: tourData.duration,
+            price: {
+              value: tourData.price.value,
+              basedOnTips: tourData.price.basedOnTips,
+            },
+            meetingPoint: tourData.meetingPoint,
+            language: tourData.language,
+          })
+
+          setSelectedLanguages(tourData.language)
+
+          // If there are existing images, we would handle them here
+          // This depends on how your API returns image data
+        } catch (error) {
+          console.error("Error fetching tour:", error)
+          toast({
+            title: "Error",
+            description: "No se pudo cargar la información del tour",
+            variant: "destructive",
+          })
+        }
+      }
+
+      fetchTour()
+    }
+  }, [isEditing, params.action, reset])
+
+  // Handle file selection
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0) return
+
+    // Crear previsualizaciones para las imágenes seleccionadas
+    const newPendingImages = files.map((file) => ({
+      file,
+      url: URL.createObjectURL(file),
+    }))
+
+    setPendingImages(newPendingImages)
+    setCurrentImageIndex(0)
+    setIsImageDialogOpen(true)
+
+    // Limpiar el input para permitir seleccionar el mismo archivo nuevamente
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
+  }
+
+  // Confirmar la imagen actual
+  const confirmCurrentImage = () => {
+    if (pendingImages.length === 0 || currentImageIndex >= pendingImages.length) return
+
+    const currentImage = pendingImages[currentImageIndex]
+
+    // Añadir la imagen a las imágenes confirmadas
+    const updatedFiles = [...imageFiles, currentImage.file]
+    setImageFiles(updatedFiles)
+    setImagePreviews((prev) => [...prev, currentImage.url])
+
+    // Actualizar el valor del formulario
+    setValue("images", updatedFiles)
+
+    // Pasar a la siguiente imagen o cerrar el diálogo si es la última
+    if (currentImageIndex < pendingImages.length - 1) {
+      setCurrentImageIndex(currentImageIndex + 1)
+    } else {
+      closeImageDialog()
+    }
+
+    toast({
+      title: "Imagen añadida",
+      description: "La imagen se ha añadido correctamente",
+    })
+  }
+
+  // Rechazar la imagen actual
+  const rejectCurrentImage = () => {
+    if (pendingImages.length === 0 || currentImageIndex >= pendingImages.length) return
+
+    // Liberar la URL de la imagen rechazada
+    URL.revokeObjectURL(pendingImages[currentImageIndex].url)
+
+    // Pasar a la siguiente imagen o cerrar el diálogo si es la última
+    if (currentImageIndex < pendingImages.length - 1) {
+      setCurrentImageIndex(currentImageIndex + 1)
+    } else {
+      closeImageDialog()
+    }
+  }
+
+  // Cerrar el diálogo y limpiar las imágenes pendientes
+  const closeImageDialog = () => {
+    // Liberar las URLs de las imágenes pendientes que no se confirmaron
+    pendingImages.forEach((img, index) => {
+      if (index >= currentImageIndex) {
+        URL.revokeObjectURL(img.url)
+      }
+    })
+
+    setIsImageDialogOpen(false)
+    setPendingImages([])
+    setCurrentImageIndex(0)
+  }
+
+  // Remove a specific image
+  const removeImage = (index: number) => {
+    const newFiles = [...imageFiles]
+    newFiles.splice(index, 1)
+
+    // Update form value
+    setValue("images", newFiles)
+    setImageFiles(newFiles)
+
+    // Update previews
+    URL.revokeObjectURL(imagePreviews[index])
+    const newPreviews = [...imagePreviews]
+    newPreviews.splice(index, 1)
+    setImagePreviews(newPreviews)
+
+    toast({
+      title: "Imagen eliminada",
+      description: "La imagen se ha eliminado correctamente",
+    })
+  }
+
+  // Handle language selection
+  const toggleLanguage = (language: string) => {
+    setSelectedLanguages((current) => {
+      const updated = current.includes(language) ? current.filter((l) => l !== language) : [...current, language]
+
+      // Update form value
+      setValue("language", updated)
+      return updated
+    })
+  }
+
+  // Form submission
+  const onSubmit = async (data: TourFormValues) => {
+    setIsSubmitting(true)
+
+    const endpoint = isEditing ? `/api/tours/${params.action}` : "/api/tours"
+    const method = isEditing ? "PUT" : "POST"
+
+    const formData = new FormData()
+    formData.append("title", data.title)
+    formData.append("category", data.category)
+    formData.append("description", data.description)
+    formData.append("duration", data.duration)
+    formData.append("price", data.price.value.toString())
+    formData.append("meetingPoint", data.meetingPoint)
+
+    // Add languages
+    data.language.forEach((lang) => formData.append("language[]", lang))
+
+    // Add images
+    if (data.images && data.images.length > 0) {
+      for (const file of data.images) {
+        formData.append("images", file)
+      }
+    }
+
+    try {
+      const response = await fetch(endpoint, {
+        method,
+        body: formData,
+      })
+
+      if (!response.ok) {
+        throw new Error("Error al guardar el tour")
+      }
+
+      toast({
+        title: "Éxito",
+        description: isEditing ? "Tour actualizado correctamente" : "Tour creado correctamente",
+      })
+
+      router.push("/dashboard")
+      router.refresh()
+    } catch (error) {
+      console.error("Error:", error)
+      toast({
+        title: "Error",
+        description: "No se pudo guardar el tour. Inténtalo de nuevo.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  // Obtener idiomas no seleccionados
+  const unselectedLanguages = LANGUAGES.filter((lang) => !selectedLanguages.includes(lang))
+
+  return (
+    <>
+      <Card className="w-full max-w-4xl mx-auto">
+        <CardHeader>
+          <CardTitle>{isEditing ? "Editar Tour" : "Nuevo Tour"}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="title">Título</Label>
+              <Input id="title" {...register("title")} placeholder="Ej: Tour por el casco histórico" />
+              {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="category">Categoría</Label>
+              <Select onValueChange={(value) => setValue("category", value)} defaultValue={watch("category")}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona una categoría" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORIES.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.category && <p className="text-sm text-destructive">{errors.category.message}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Descripción</Label>
+              <Textarea
+                id="description"
+                {...register("description")}
+                placeholder="Describe tu tour en detalle"
+                className="min-h-[120px]"
+              />
+              {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="duration">Duración</Label>
+                <Input id="duration" {...register("duration")} placeholder="Ej: 2 horas" />
+                {errors.duration && <p className="text-sm text-destructive">{errors.duration.message}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="price">Precio (€)</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  {...register("price.value", { valueAsNumber: true })}
+                  placeholder="0.00"
+                />
+                {errors.price?.value && <p className="text-sm text-destructive">{errors.price.value.message}</p>}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="meetingPoint">Punto de encuentro</Label>
+              <Input
+                id="meetingPoint"
+                {...register("meetingPoint")}
+                placeholder="Ej: Plaza Mayor, junto a la estatua"
+              />
+              {errors.meetingPoint && <p className="text-sm text-destructive">{errors.meetingPoint.message}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Idiomas</Label>
+
+              {/* Idiomas seleccionados */}
+              {selectedLanguages.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {selectedLanguages.map((language) => (
+                    <Badge key={language} variant="secondary" className="flex items-center gap-1">
+                      {language}
+                      <button
+                        type="button"
+                        onClick={() => toggleLanguage(language)}
+                        className="ml-1 rounded-full hover:bg-muted p-0.5"
+                      >
+                        <X className="h-3 w-3" />
+                        <span className="sr-only">Eliminar {language}</span>
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+
+              {/* Idiomas disponibles para añadir con un clic */}
+              <div className="flex flex-wrap gap-2 mb-3">
+                {unselectedLanguages.map((language) => (
+                  <Badge
+                    key={language}
+                    variant="outline"
+                    className="flex items-center gap-1 cursor-pointer hover:bg-secondary hover:text-secondary-foreground transition-colors"
+                    onClick={() => toggleLanguage(language)}
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    {language}
+                  </Badge>
+                ))}
+              </div>
+
+              {/* Selector de idiomas avanzado */}
+              <Popover open={languagePopoverOpen} onOpenChange={setLanguagePopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={languagePopoverOpen}
+                    className="w-full justify-between"
+                  >
+                    {selectedLanguages.length > 0
+                      ? `${selectedLanguages.length} idioma${selectedLanguages.length > 1 ? "s" : ""} seleccionado${selectedLanguages.length > 1 ? "s" : ""}`
+                      : "Buscar idiomas"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0">
+                  <Command>
+                    <CommandInput placeholder="Buscar idioma..." />
+                    <CommandList>
+                      <CommandEmpty>No se encontraron resultados.</CommandEmpty>
+                      <CommandGroup>
+                        {LANGUAGES.map((language) => (
+                          <CommandItem key={language} value={language} onSelect={() => toggleLanguage(language)}>
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedLanguages.includes(language) ? "opacity-100" : "opacity-0",
+                              )}
+                            />
+                            {language}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+
+              {errors.language && <p className="text-sm text-destructive">{errors.language.message}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="images">Imágenes</Label>
+
+              {imagePreviews.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-4">
+                  {imagePreviews.map((preview, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={preview || "/placeholder.svg"}
+                        alt={`Vista previa ${index + 1}`}
+                        className="h-24 w-full object-cover rounded-md"
+                      />
+                      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity rounded-md flex items-center justify-center">
+                        <button
+                          type="button"
+                          onClick={() => removeImage(index)}
+                          className="bg-red-500 rounded-full p-1 text-white"
+                        >
+                          <X className="h-4 w-4" />
+                          <span className="sr-only">Eliminar imagen</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-center w-full">
+                  <label
+                    htmlFor="images"
+                    className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/50 hover:bg-muted"
+                  >
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <Upload className="w-8 h-8 mb-2 text-muted-foreground" />
+                      <p className="mb-2 text-sm text-muted-foreground">
+                        <span className="font-semibold">Haz clic para seleccionar imágenes</span> o arrastra y suelta
+                      </p>
+                      <p className="text-xs text-muted-foreground">PNG, JPG o WEBP (MAX. 10MB)</p>
+                      {imagePreviews.length > 0 && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {imagePreviews.length} {imagePreviews.length === 1 ? "imagen subida" : "imágenes subidas"}
+                        </p>
+                      )}
+                    </div>
+                    <Input
+                      id="images"
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleFileChange}
+                      ref={fileInputRef}
+                    />
+                  </label>
+                </div>
+
+                {imagePreviews.length > 0 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      // Limpiar todas las imágenes
+                      setImageFiles([])
+                      setImagePreviews((prev) => {
+                        prev.forEach((url) => URL.revokeObjectURL(url))
+                        return []
+                      })
+                      setValue("images", [])
+                      toast({
+                        title: "Imágenes eliminadas",
+                        description: "Todas las imágenes han sido eliminadas",
+                      })
+                    }}
+                  >
+                    Eliminar todas las imágenes
+                  </Button>
+                )}
+              </div>
+
+              {errors.images && <p className="text-sm text-destructive">{errors.images.message}</p>}
+            </div>
+
+            <div className="flex justify-end gap-4 pt-4">
+              <Button type="button" variant="outline" onClick={() => router.back()} disabled={isSubmitting}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {isEditing ? "Guardando..." : "Creando..."}
+                  </>
+                ) : isEditing ? (
+                  "Guardar cambios"
+                ) : (
+                  "Crear tour"
+                )}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      {/* Diálogo de confirmación de imagen */}
+      <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirmar imagen</DialogTitle>
+          </DialogHeader>
+
+          {pendingImages.length > 0 && currentImageIndex < pendingImages.length && (
+            <div className="flex flex-col items-center space-y-4">
+              <div className="relative w-full h-64 bg-muted rounded-md overflow-hidden">
+                <img
+                  src={pendingImages[currentImageIndex].url || "/placeholder.svg"}
+                  alt="Vista previa de imagen"
+                  className="w-full h-full object-contain"
+                />
+              </div>
+
+              <div className="text-center text-sm text-muted-foreground">
+                Imagen {currentImageIndex + 1} de {pendingImages.length}
+              </div>
+
+              <div className="flex justify-center gap-4 w-full">
+                <Button variant="outline" onClick={rejectCurrentImage}>
+                  Rechazar
+                </Button>
+                <Button onClick={confirmCurrentImage}>Aceptar y subir</Button>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="sm:justify-start">
+            <Button variant="secondary" onClick={closeImageDialog}>
+              Cancelar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  )
+}
+
