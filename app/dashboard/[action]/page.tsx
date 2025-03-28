@@ -1,18 +1,30 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
+import type { ReactNode } from "react";
 
-import { useEffect, useState, useRef } from "react"
-import { useRouter } from "next/navigation"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import * as z from "zod"
-import { Button } from "../../components/ui/button"
-import { Input } from "../../components/ui/input"
-import { Textarea } from "../../components/ui/textarea"
-import { Label } from "../../components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select"
+import { useEffect, useState, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Textarea } from "../../components/ui/textarea";
+import { Label } from "../../components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../../components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select";
 import {
   Command,
   CommandEmpty,
@@ -20,13 +32,25 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "../../components/ui/command"
-import { Popover, PopoverContent, PopoverTrigger } from "../../components/ui/popover"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog"
-import { Check, X, Loader2, Upload } from "lucide-react"
-import { Badge } from "../../components/ui/badge"
-import { cn } from "@/lib/utils"
-import { toast } from "../../components/ui/use-toast"
+} from "../../components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "../../components/ui/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "../../components/ui/dialog";
+import { Check, X, Loader2, Upload } from "lucide-react";
+import { Badge } from "../../components/ui/badge";
+import { cn } from "@/lib/utils";
+import { toast } from "../../components/ui/use-toast";
+import { Tour } from "../../../types/index";
+import { Metadata } from "next";
 
 const CATEGORIES = [
   "Cultural",
@@ -38,9 +62,19 @@ const CATEGORIES = [
   "Artístico",
   "Nocturno",
   "Familiar",
-]
+];
 
-const LANGUAGES = ["Español", "Inglés", "Francés", "Alemán", "Italiano", "Portugués", "Chino", "Japonés", "Ruso"]
+const LANGUAGES = [
+  "Español",
+  "Inglés",
+  "Francés",
+  "Alemán",
+  "Italiano",
+  "Portugués",
+  "Chino",
+  "Japonés",
+  "Ruso",
+];
 
 const tourSchema = z.object({
   title: z.string().min(1, "El título es requerido"),
@@ -54,29 +88,41 @@ const tourSchema = z.object({
   meetingPoint: z.string().min(1, "El punto de encuentro es requerido"),
   language: z.array(z.string()).min(1, "Debes seleccionar al menos un idioma"),
   images: z.array(z.instanceof(File)).optional(),
-})
+});
 
-type TourFormValues = z.infer<typeof tourSchema>
+type TourFormValues = z.infer<typeof tourSchema>;
 
 interface ImagePreview {
-  file: File
-  url: string
+  file: File;
+  url: string;
 }
 
-export default function TourForm({ params }: { params: { action: string } }) {
-  const router = useRouter()
-  const isEditing = params.action !== "new"
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [selectedLanguages, setSelectedLanguages] = useState<string[]>([])
-  const [imageFiles, setImageFiles] = useState<File[]>([])
-  const [imagePreviews, setImagePreviews] = useState<string[]>([])
-  const [languagePopoverOpen, setLanguagePopoverOpen] = useState(false)
+export interface TourFormProps {
+  params: { action: string };
+}
 
-  const [isImageDialogOpen, setIsImageDialogOpen] = useState(false)
-  const [pendingImages, setPendingImages] = useState<ImagePreview[]>([])
-  const [currentImageIndex, setCurrentImageIndex] = useState(0)
+export async function generateMetadata({
+  params,
+}: TourFormProps): Promise<Metadata> {
+  const action = params.action;
 
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  return { title: action === "new" ? "Nuevo Tour" : "Editar Tour" };
+}
+
+export default function TourForm({ params }: TourFormProps) {
+  const router = useRouter();
+  const isEditing = params.action !== "new";
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [languagePopoverOpen, setLanguagePopoverOpen] = useState(false);
+
+  const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
+  const [pendingImages, setPendingImages] = useState<ImagePreview[]>([]);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
     register,
@@ -100,18 +146,18 @@ export default function TourForm({ params }: { params: { action: string } }) {
       language: [],
       images: [],
     },
-  })
+  });
 
-  const watchedLanguages = watch("language")
+  const watchedLanguages = watch("language");
 
   useEffect(() => {
     if (isEditing) {
       const fetchTour = async () => {
         try {
-          const response = await fetch(`/api/tours/${params.action}`)
-          if (!response.ok) throw new Error("No se pudo cargar el tour")
+          const response = await fetch(`/api/tours/${params.action}`);
+          if (!response.ok) throw new Error("No se pudo cargar el tour");
 
-          const tourData = await response.json()
+          const tourData = await response.json();
 
           reset({
             title: tourData.title,
@@ -124,144 +170,147 @@ export default function TourForm({ params }: { params: { action: string } }) {
             },
             meetingPoint: tourData.meetingPoint,
             language: tourData.language,
-          })
+          });
 
-          setSelectedLanguages(tourData.language)
-
+          setSelectedLanguages(tourData.language);
         } catch (error) {
-          console.error("Error fetching tour:", error)
+          console.error("Error fetching tour:", error);
           toast({
             title: "Error",
             description: "No se pudo cargar la información del tour",
             variant: "destructive",
-          })
+          });
         }
-      }
+      };
 
-      fetchTour()
+      fetchTour();
     }
-  }, [isEditing, params.action, reset])
+  }, [isEditing, params.action, reset]);
 
   // Handle file selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || [])
-    if (files.length === 0) return
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
     // Crear previsualizaciones para las imágenes seleccionadas
     const newPendingImages = files.map((file) => ({
       file,
       url: URL.createObjectURL(file),
-    }))
+    }));
 
-    setPendingImages(newPendingImages)
-    setCurrentImageIndex(0)
-    setIsImageDialogOpen(true)
+    setPendingImages(newPendingImages);
+    setCurrentImageIndex(0);
+    setIsImageDialogOpen(true);
 
     if (fileInputRef.current) {
-      fileInputRef.current.value = ""
+      fileInputRef.current.value = "";
     }
-  }
+  };
 
   const confirmCurrentImage = () => {
-    if (pendingImages.length === 0 || currentImageIndex >= pendingImages.length) return
+    if (pendingImages.length === 0 || currentImageIndex >= pendingImages.length)
+      return;
 
-    const currentImage = pendingImages[currentImageIndex]
+    const currentImage = pendingImages[currentImageIndex];
 
     // Añadir la imagen a las imágenes confirmadas
-    const updatedFiles = [...imageFiles, currentImage.file]
-    setImageFiles(updatedFiles)
-    setImagePreviews((prev) => [...prev, currentImage.url])
+    const updatedFiles = [...imageFiles, currentImage.file];
+    setImageFiles(updatedFiles);
+    setImagePreviews((prev) => [...prev, currentImage.url]);
 
     // Actualizar el valor del formulario
-    setValue("images", updatedFiles)
+    setValue("images", updatedFiles);
 
     // Pasar a la siguiente imagen o cerrar el diálogo si es la última
     if (currentImageIndex < pendingImages.length - 1) {
-      setCurrentImageIndex(currentImageIndex + 1)
+      setCurrentImageIndex(currentImageIndex + 1);
     } else {
-      closeImageDialog()
+      closeImageDialog();
     }
 
     toast({
       title: "Imagen añadida",
       description: "La imagen se ha añadido correctamente",
-    })
-  }
+    });
+  };
 
   const rejectCurrentImage = () => {
-    if (pendingImages.length === 0 || currentImageIndex >= pendingImages.length) return
+    if (pendingImages.length === 0 || currentImageIndex >= pendingImages.length)
+      return;
 
-    URL.revokeObjectURL(pendingImages[currentImageIndex].url)
+    URL.revokeObjectURL(pendingImages[currentImageIndex].url);
 
     if (currentImageIndex < pendingImages.length - 1) {
-      setCurrentImageIndex(currentImageIndex + 1)
+      setCurrentImageIndex(currentImageIndex + 1);
     } else {
-      closeImageDialog()
+      closeImageDialog();
     }
-  }
+  };
 
   const closeImageDialog = () => {
     pendingImages.forEach((img, index) => {
       if (index >= currentImageIndex) {
-        URL.revokeObjectURL(img.url)
+        URL.revokeObjectURL(img.url);
       }
-    })
+    });
 
-    setIsImageDialogOpen(false)
-    setPendingImages([])
-    setCurrentImageIndex(0)
-  }
+    setIsImageDialogOpen(false);
+    setPendingImages([]);
+    setCurrentImageIndex(0);
+  };
 
   const removeImage = (index: number) => {
-    const newFiles = [...imageFiles]
-    newFiles.splice(index, 1)
+    const newFiles = [...imageFiles];
+    newFiles.splice(index, 1);
 
     // Update form value
-    setValue("images", newFiles)
-    setImageFiles(newFiles)
+    setValue("images", newFiles);
+    setImageFiles(newFiles);
 
-    URL.revokeObjectURL(imagePreviews[index])
-    const newPreviews = [...imagePreviews]
-    newPreviews.splice(index, 1)
-    setImagePreviews(newPreviews)
+    URL.revokeObjectURL(imagePreviews[index]);
+    const newPreviews = [...imagePreviews];
+    newPreviews.splice(index, 1);
+    setImagePreviews(newPreviews);
 
     toast({
       title: "Imagen eliminada",
       description: "La imagen se ha eliminado correctamente",
-    })
-  }
+    });
+  };
 
   const toggleLanguage = (language: string) => {
     setSelectedLanguages((current) => {
-      const updated = current.includes(language) ? current.filter((l) => l !== language) : [...current, language]
+      const updated = current.includes(language)
+        ? current.filter((l) => l !== language)
+        : [...current, language];
 
       // Update form value
-      setValue("language", updated)
-      return updated
-    })
-  }
+      setValue("language", updated);
+      return updated;
+    });
+  };
 
   const onSubmit = async (data: TourFormValues) => {
-    setIsSubmitting(true)
+    setIsSubmitting(true);
 
-    const endpoint = isEditing ? `/api/tours/${params.action}` : "/api/tours"
-    const method = isEditing ? "PUT" : "POST"
+    const endpoint = isEditing ? `/api/tours/${params.action}` : "/api/tours";
+    const method = isEditing ? "PUT" : "POST";
 
-    const formData = new FormData()
-    formData.append("title", data.title)
-    formData.append("category", data.category)
-    formData.append("description", data.description)
-    formData.append("duration", data.duration)
-    formData.append("price", data.price.value.toString())
-    formData.append("meetingPoint", data.meetingPoint)
+    const formData = new FormData();
+    formData.append("title", data.title);
+    formData.append("category", data.category);
+    formData.append("description", data.description);
+    formData.append("duration", data.duration);
+    formData.append("price", data.price.value.toString());
+    formData.append("meetingPoint", data.meetingPoint);
 
     // Add languages
-    data.language.forEach((lang) => formData.append("language[]", lang))
+    data.language.forEach((lang) => formData.append("language[]", lang));
 
     // Add images
     if (data.images && data.images.length > 0) {
       for (const file of data.images) {
-        formData.append("images", file)
+        formData.append("images", file);
       }
     }
 
@@ -269,30 +318,32 @@ export default function TourForm({ params }: { params: { action: string } }) {
       const response = await fetch(endpoint, {
         method,
         body: formData,
-      })
+      });
 
       if (!response.ok) {
-        throw new Error("Error al guardar el tour")
+        throw new Error("Error al guardar el tour");
       }
 
       toast({
         title: "Éxito",
-        description: isEditing ? "Tour actualizado correctamente" : "Tour creado correctamente",
-      })
+        description: isEditing
+          ? "Tour actualizado correctamente"
+          : "Tour creado correctamente",
+      });
 
-      router.push("/dashboard")
-      router.refresh()
+      router.push("/dashboard");
+      router.refresh();
     } catch (error) {
-      console.error("Error:", error)
+      console.error("Error:", error);
       toast({
         title: "Error",
         description: "No se pudo guardar el tour. Inténtalo de nuevo.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   return (
     <>
@@ -304,13 +355,24 @@ export default function TourForm({ params }: { params: { action: string } }) {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="title">Título</Label>
-              <Input id="title" {...register("title")} placeholder="Ej: Tour por el casco histórico" />
-              {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
+              <Input
+                id="title"
+                {...register("title")}
+                placeholder="Ej: Tour por el casco histórico"
+              />
+              {errors.title && (
+                <p className="text-sm text-destructive">
+                  {errors.title.message}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="category">Categoría</Label>
-              <Select onValueChange={(value) => setValue("category", value)} defaultValue={watch("category")}>
+              <Select
+                onValueChange={(value) => setValue("category", value)}
+                defaultValue={watch("category")}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecciona una categoría" />
                 </SelectTrigger>
@@ -322,7 +384,11 @@ export default function TourForm({ params }: { params: { action: string } }) {
                   ))}
                 </SelectContent>
               </Select>
-              {errors.category && <p className="text-sm text-destructive">{errors.category.message}</p>}
+              {errors.category && (
+                <p className="text-sm text-destructive">
+                  {errors.category.message}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -333,14 +399,26 @@ export default function TourForm({ params }: { params: { action: string } }) {
                 placeholder="Describe tu tour en detalle"
                 className="min-h-[120px]"
               />
-              {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
+              {errors.description && (
+                <p className="text-sm text-destructive">
+                  {errors.description.message}
+                </p>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="duration">Duración</Label>
-                <Input id="duration" {...register("duration")} placeholder="Ej: 2 horas" />
-                {errors.duration && <p className="text-sm text-destructive">{errors.duration.message}</p>}
+                <Input
+                  id="duration"
+                  {...register("duration")}
+                  placeholder="Ej: 2 horas"
+                />
+                {errors.duration && (
+                  <p className="text-sm text-destructive">
+                    {errors.duration.message}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -353,7 +431,11 @@ export default function TourForm({ params }: { params: { action: string } }) {
                   {...register("price.value", { valueAsNumber: true })}
                   placeholder="0.00"
                 />
-                {errors.price?.value && <p className="text-sm text-destructive">{errors.price.value.message}</p>}
+                {errors.price?.value && (
+                  <p className="text-sm text-destructive">
+                    {errors.price.value.message}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -364,12 +446,19 @@ export default function TourForm({ params }: { params: { action: string } }) {
                 {...register("meetingPoint")}
                 placeholder="Ej: Plaza Mayor, junto a la estatua"
               />
-              {errors.meetingPoint && <p className="text-sm text-destructive">{errors.meetingPoint.message}</p>}
+              {errors.meetingPoint && (
+                <p className="text-sm text-destructive">
+                  {errors.meetingPoint.message}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
               <Label>Idiomas</Label>
-              <Popover open={languagePopoverOpen} onOpenChange={setLanguagePopoverOpen}>
+              <Popover
+                open={languagePopoverOpen}
+                onOpenChange={setLanguagePopoverOpen}
+              >
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -378,7 +467,11 @@ export default function TourForm({ params }: { params: { action: string } }) {
                     className="w-full justify-between"
                   >
                     {selectedLanguages.length > 0
-                      ? `${selectedLanguages.length} idioma${selectedLanguages.length > 1 ? "s" : ""} seleccionado${selectedLanguages.length > 1 ? "s" : ""}`
+                      ? `${selectedLanguages.length} idioma${
+                          selectedLanguages.length > 1 ? "s" : ""
+                        } seleccionado${
+                          selectedLanguages.length > 1 ? "s" : ""
+                        }`
                       : "Selecciona idiomas"}
                   </Button>
                 </PopoverTrigger>
@@ -389,11 +482,17 @@ export default function TourForm({ params }: { params: { action: string } }) {
                       <CommandEmpty>No se encontraron resultados.</CommandEmpty>
                       <CommandGroup>
                         {LANGUAGES.map((language) => (
-                          <CommandItem key={language} value={language} onSelect={() => toggleLanguage(language)}>
+                          <CommandItem
+                            key={language}
+                            value={language}
+                            onSelect={() => toggleLanguage(language)}
+                          >
                             <Check
                               className={cn(
                                 "mr-2 h-4 w-4",
-                                selectedLanguages.includes(language) ? "opacity-100" : "opacity-0",
+                                selectedLanguages.includes(language)
+                                  ? "opacity-100"
+                                  : "opacity-0"
                               )}
                             />
                             {language}
@@ -408,7 +507,11 @@ export default function TourForm({ params }: { params: { action: string } }) {
               {selectedLanguages.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-2">
                   {selectedLanguages.map((language) => (
-                    <Badge key={language} variant="secondary" className="flex items-center gap-1">
+                    <Badge
+                      key={language}
+                      variant="secondary"
+                      className="flex items-center gap-1"
+                    >
                       {language}
                       <button
                         type="button"
@@ -423,7 +526,11 @@ export default function TourForm({ params }: { params: { action: string } }) {
                 </div>
               )}
 
-              {errors.language && <p className="text-sm text-destructive">{errors.language.message}</p>}
+              {errors.language && (
+                <p className="text-sm text-destructive">
+                  {errors.language.message}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -462,12 +569,20 @@ export default function TourForm({ params }: { params: { action: string } }) {
                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
                       <Upload className="w-8 h-8 mb-2 text-muted-foreground" />
                       <p className="mb-2 text-sm text-muted-foreground">
-                        <span className="font-semibold">Haz clic para seleccionar imágenes</span> o arrastra y suelta
+                        <span className="font-semibold">
+                          Haz clic para seleccionar imágenes
+                        </span>{" "}
+                        o arrastra y suelta
                       </p>
-                      <p className="text-xs text-muted-foreground">PNG, JPG o WEBP (MAX. 10MB)</p>
+                      <p className="text-xs text-muted-foreground">
+                        PNG, JPG o WEBP (MAX. 10MB)
+                      </p>
                       {imagePreviews.length > 0 && (
                         <p className="text-xs text-muted-foreground mt-1">
-                          {imagePreviews.length} {imagePreviews.length === 1 ? "imagen subida" : "imágenes subidas"}
+                          {imagePreviews.length}{" "}
+                          {imagePreviews.length === 1
+                            ? "imagen subida"
+                            : "imágenes subidas"}
                         </p>
                       )}
                     </div>
@@ -490,16 +605,16 @@ export default function TourForm({ params }: { params: { action: string } }) {
                     className="w-full"
                     onClick={() => {
                       // Limpiar todas las imágenes
-                      setImageFiles([])
+                      setImageFiles([]);
                       setImagePreviews((prev) => {
-                        prev.forEach((url) => URL.revokeObjectURL(url))
-                        return []
-                      })
-                      setValue("images", [])
+                        prev.forEach((url) => URL.revokeObjectURL(url));
+                        return [];
+                      });
+                      setValue("images", []);
                       toast({
                         title: "Imágenes eliminadas",
                         description: "Todas las imágenes han sido eliminadas",
-                      })
+                      });
                     }}
                   >
                     Eliminar todas las imágenes
@@ -507,11 +622,20 @@ export default function TourForm({ params }: { params: { action: string } }) {
                 )}
               </div>
 
-              {errors.images && <p className="text-sm text-destructive">{errors.images.message}</p>}
+              {errors.images && (
+                <p className="text-sm text-destructive">
+                  {errors.images.message}
+                </p>
+              )}
             </div>
 
             <div className="flex justify-end gap-4 pt-4">
-              <Button type="button" variant="outline" onClick={() => router.back()} disabled={isSubmitting}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => router.back()}
+                disabled={isSubmitting}
+              >
                 Cancelar
               </Button>
               <Button type="submit" disabled={isSubmitting}>
@@ -538,28 +662,31 @@ export default function TourForm({ params }: { params: { action: string } }) {
             <DialogTitle>Confirmar imagen</DialogTitle>
           </DialogHeader>
 
-          {pendingImages.length > 0 && currentImageIndex < pendingImages.length && (
-            <div className="flex flex-col items-center space-y-4">
-              <div className="relative w-full h-64 bg-muted rounded-md overflow-hidden">
-                <img
-                  src={pendingImages[currentImageIndex].url || "/placeholder.svg"}
-                  alt="Vista previa de imagen"
-                  className="w-full h-full object-contain"
-                />
-              </div>
+          {pendingImages.length > 0 &&
+            currentImageIndex < pendingImages.length && (
+              <div className="flex flex-col items-center space-y-4">
+                <div className="relative w-full h-64 bg-muted rounded-md overflow-hidden">
+                  <img
+                    src={
+                      pendingImages[currentImageIndex].url || "/placeholder.svg"
+                    }
+                    alt="Vista previa de imagen"
+                    className="w-full h-full object-contain"
+                  />
+                </div>
 
-              <div className="text-center text-sm text-muted-foreground">
-                Imagen {currentImageIndex + 1} de {pendingImages.length}
-              </div>
+                <div className="text-center text-sm text-muted-foreground">
+                  Imagen {currentImageIndex + 1} de {pendingImages.length}
+                </div>
 
-              <div className="flex justify-center gap-4 w-full">
-                <Button variant="outline" onClick={rejectCurrentImage}>
-                  Rechazar
-                </Button>
-                <Button onClick={confirmCurrentImage}>Aceptar y subir</Button>
+                <div className="flex justify-center gap-4 w-full">
+                  <Button variant="outline" onClick={rejectCurrentImage}>
+                    Rechazar
+                  </Button>
+                  <Button onClick={confirmCurrentImage}>Aceptar y subir</Button>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
           <DialogFooter className="sm:justify-start">
             <Button variant="secondary" onClick={closeImageDialog}>
@@ -569,6 +696,5 @@ export default function TourForm({ params }: { params: { action: string } }) {
         </DialogContent>
       </Dialog>
     </>
-  )
+  );
 }
-
