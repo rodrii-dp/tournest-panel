@@ -98,8 +98,13 @@ interface ImagePreview {
   url: string;
 }
 
-export interface TourFormProps {
-  params: { action: string };
+interface TourFormProps {
+  params: {
+    action: string;
+  };
+  searchParams?: {
+    [key: string]: string | string[] | undefined;
+  };
 }
 
 async function generateMetadata({ params }: TourFormProps): Promise<Metadata> {
