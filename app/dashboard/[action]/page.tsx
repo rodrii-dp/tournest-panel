@@ -51,6 +51,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "../../components/ui/use-toast";
 import { Tour } from "../../../types/index";
 import { Metadata } from "next";
+import Image from "next/image";
 
 const CATEGORIES = [
   "Cultural",
@@ -101,9 +102,7 @@ export interface TourFormProps {
   params: { action: string };
 }
 
-export async function generateMetadata({
-  params,
-}: TourFormProps): Promise<Metadata> {
+async function generateMetadata({ params }: TourFormProps): Promise<Metadata> {
   const action = params.action;
 
   return { title: action === "new" ? "Nuevo Tour" : "Editar Tour" };
@@ -540,7 +539,7 @@ export default function TourForm({ params }: TourFormProps) {
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-4">
                   {imagePreviews.map((preview, index) => (
                     <div key={index} className="relative group">
-                      <img
+                      <Image
                         src={preview || "/placeholder.svg"}
                         alt={`Vista previa ${index + 1}`}
                         className="h-24 w-full object-cover rounded-md"
@@ -666,7 +665,7 @@ export default function TourForm({ params }: TourFormProps) {
             currentImageIndex < pendingImages.length && (
               <div className="flex flex-col items-center space-y-4">
                 <div className="relative w-full h-64 bg-muted rounded-md overflow-hidden">
-                  <img
+                  <Image
                     src={
                       pendingImages[currentImageIndex].url || "/placeholder.svg"
                     }
