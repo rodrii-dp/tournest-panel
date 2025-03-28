@@ -1,15 +1,15 @@
-FROM node:lts as dependencies
+FROM node:lts AS dependencies
 WORKDIR /tournest-panel
 COPY package.json package-lock.json ./
 RUN npm ci
 
-FROM node:lts as builder
+FROM node:lts AS builder
 WORKDIR /tournest-panel
 COPY . .
 COPY --from=dependencies /tournest-panel/node_modules ./node_modules
 RUN npm run build
 
-FROM node:lts as runner
+FROM node:lts AS runner
 WORKDIR /tournest-panel
 ENV NODE_ENV production
 # If you are using a custom next.config.js file, uncomment this line.
