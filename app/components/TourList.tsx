@@ -61,6 +61,8 @@ export default async function TourList() {
                           src={tour.images[0].imageUrl || "/placeholder.svg"}
                           alt={tour.title}
                           className="w-full h-full object-cover rounded-lg"
+                          width={40}
+                          height={40}
                         />
                       ) : (
                         <MapPin className="w-5 h-5 text-gray-400" />
