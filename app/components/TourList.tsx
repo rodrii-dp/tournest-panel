@@ -90,7 +90,7 @@ export default async function TourList() {
                 <TableCell>
                   <div className="flex items-center text-gray-500">
                     <MapPin className="w-4 h-4 mr-1" />
-                    {tour.location.name}
+                    {tour.location?.name}
                   </div>
                 </TableCell>
                 <TableCell>

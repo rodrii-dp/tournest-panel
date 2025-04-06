@@ -52,6 +52,7 @@ import { toast } from "../../components/ui/use-toast";
 import { Tour } from "../../../types/index";
 import { Metadata } from "next";
 import Image from "next/image";
+import { use } from "react";
 
 const CATEGORIES = [
   "Cultural",
@@ -92,6 +93,9 @@ const tourSchema = z.object({
 });
 
 type TourFormValues = z.infer<typeof tourSchema>;
+type RouteParams = {
+  action: string;
+};
 
 interface ImagePreview {
   file: File;
@@ -108,14 +112,17 @@ interface TourFormProps {
 }
 
 async function generateMetadata({ params }: TourFormProps): Promise<Metadata> {
-  const action = params.action;
+  const unwrappedParams = params instanceof Promise ? await params : params;
+  const action = unwrappedParams.action;
 
   return { title: action === "new" ? "Nuevo Tour" : "Editar Tour" };
 }
 
 export default function TourForm({ params }: TourFormProps) {
   const router = useRouter();
-  const isEditing = params.action !== "new";
+  const unwrappedParams: RouteParams =
+    params instanceof Promise ? use(params) : params;
+  const isEditing = unwrappedParams.action !== "new";
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
@@ -154,11 +161,11 @@ export default function TourForm({ params }: TourFormProps) {
 
   const watchedLanguages = watch("language");
 
-  useEffect(() => {
+  /*useEffect(() => {
     if (isEditing) {
       const fetchTour = async () => {
         try {
-          const response = await fetch(`/api/tours/${params.action}`);
+          const response = await fetch(`/api/tours/${unwrappedParams.action}`);
           if (!response.ok) throw new Error("No se pudo cargar el tour");
 
           const tourData = await response.json();
@@ -189,7 +196,7 @@ export default function TourForm({ params }: TourFormProps) {
 
       fetchTour();
     }
-  }, [isEditing, params.action, reset]);
+  }, [isEditing, unwrappedParams.action, reset]);*/
 
   // Handle file selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -297,34 +304,65 @@ export default function TourForm({ params }: TourFormProps) {
   const onSubmit = async (data: TourFormValues) => {
     setIsSubmitting(true);
 
-    const endpoint = isEditing ? `/api/tours/${params.action}` : "/api/tours";
-    const method = isEditing ? "PUT" : "POST";
-
-    const formData = new FormData();
-    formData.append("title", data.title);
-    formData.append("category", data.category);
-    formData.append("description", data.description);
-    formData.append("duration", data.duration);
-    formData.append("price", data.price.value.toString());
-    formData.append("meetingPoint", data.meetingPoint);
-
-    // Add languages
-    data.language.forEach((lang) => formData.append("language[]", lang));
-
-    // Add images
-    if (data.images && data.images.length > 0) {
-      for (const file of data.images) {
-        formData.append("images", file);
-      }
-    }
-
     try {
-      const response = await fetch(endpoint, {
+      console.log("HELLO");
+      const uploadedImageUrls = [];
+
+      if (data.images && data.images.length > 0) {
+        for (const file of data.images) {
+          const formData = new FormData();
+          formData.append("file", file);
+          formData.append(
+            "upload_preset",
+            process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "ml_default"
+          );
+
+          const response = await fetch(
+            `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+            {
+              method: "POST",
+              body: formData,
+            }
+          );
+
+          if (!response.ok) {
+            throw new Error("Error al subir una imagen a Cloudinary");
+          }
+
+          const result = await response.json();
+          uploadedImageUrls.push(result.secure_url);
+        }
+      }
+
+      // Luego, envía los datos del tour junto con las URLs de las imágenes
+      const tourData = {
+        title: data.title,
+        category: data.category,
+        description: data.description,
+        duration: data.duration,
+        price: {
+          value: data.price.value,
+          basedOnTips: data.price.basedOnTips,
+        },
+        meetingPoint: data.meetingPoint,
+        language: data.language,
+        imageUrls: uploadedImageUrls, // Usar las URLs de Cloudinary
+      };
+
+      const endpoint = isEditing
+        ? `/api/tours/${unwrappedParams.action}`
+        : "/api/tours";
+      const method = isEditing ? "PUT" : "POST";
+
+      const tourResponse = await fetch(endpoint, {
         method,
-        body: formData,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(tourData),
       });
 
-      if (!response.ok) {
+      if (!tourResponse.ok) {
         throw new Error("Error al guardar el tour");
       }
 
@@ -377,12 +415,16 @@ export default function TourForm({ params }: TourFormProps) {
                 onValueChange={(value) => setValue("category", value)}
                 defaultValue={watch("category")}
               >
-                <SelectTrigger>
+                <SelectTrigger className="bg-white">
                   <SelectValue placeholder="Selecciona una categoría" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white">
                   {CATEGORIES.map((category) => (
-                    <SelectItem key={category} value={category}>
+                    <SelectItem
+                      key={category}
+                      value={category}
+                      className="bg-white"
+                    >
                       {category}
                     </SelectItem>
                   ))}
@@ -548,6 +590,8 @@ export default function TourForm({ params }: TourFormProps) {
                         src={preview || "/placeholder.svg"}
                         alt={`Vista previa ${index + 1}`}
                         className="h-24 w-full object-cover rounded-md"
+                        width={200}
+                        height={200}
                       />
                       <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity rounded-md flex items-center justify-center">
                         <button
@@ -659,7 +703,6 @@ export default function TourForm({ params }: TourFormProps) {
         </CardContent>
       </Card>
 
-      {/* Diálogo de confirmación de imagen */}
       <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -676,6 +719,8 @@ export default function TourForm({ params }: TourFormProps) {
                     }
                     alt="Vista previa de imagen"
                     className="w-full h-full object-contain"
+                    width={400}
+                    height={400}
                   />
                 </div>
 

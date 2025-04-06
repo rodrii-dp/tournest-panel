@@ -87,11 +87,6 @@ const tourSchema = z.object({
 
 type TourFormValues = z.infer<typeof tourSchema>;
 
-interface ImagePreview {
-  file: File;
-  url: string;
-}
-
 interface TourFormProps {
   initialData?: Partial<TourFormValues>;
   onSubmit: (data: TourFormValues) => Promise<void>;
@@ -135,9 +130,6 @@ export function TourForm({
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [languagePopoverOpen, setLanguagePopoverOpen] = useState(false);
-  const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
-  const [pendingImages, setPendingImages] = useState<ImagePreview[]>([]);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -146,72 +138,38 @@ export function TourForm({
       if (initialData.language) {
         setSelectedLanguages(initialData.language);
       }
+      if (initialData.images && Array.isArray(initialData.images)) {
+        setImageFiles(initialData.images as File[]);
+        setImagePreviews(
+          initialData.images.map((file) => URL.createObjectURL(file))
+        );
+        setValue("images", initialData.images);
+      }
     }
-  }, [initialData, reset]);
+  }, [initialData, reset, setValue]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
-    const newPendingImages = files.map((file) => ({
-      file,
-      url: URL.createObjectURL(file),
-    }));
-
-    setPendingImages(newPendingImages);
-    setCurrentImageIndex(0);
-    setIsImageDialogOpen(true);
+    const newFiles = [...imageFiles, ...files];
+    setImageFiles(newFiles);
+    const newPreviews = newFiles.map((file) => URL.createObjectURL(file));
+    setImagePreviews(newPreviews);
+    setValue("images", newFiles);
 
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
-  };
-
-  const confirmCurrentImage = () => {
-    if (pendingImages.length === 0 || currentImageIndex >= pendingImages.length)
-      return;
-
-    const currentImage = pendingImages[currentImageIndex];
-    const updatedFiles = [...imageFiles, currentImage.file];
-    setImageFiles(updatedFiles);
-    setImagePreviews((prev) => [...prev, currentImage.url]);
-    setValue("images", updatedFiles);
-
-    if (currentImageIndex < pendingImages.length - 1) {
-      setCurrentImageIndex(currentImageIndex + 1);
-    } else {
-      closeImageDialog();
-    }
 
     toast({
-      title: "Imagen añadida",
-      description: "La imagen se ha añadido correctamente",
+      title: `<span class="math-inline">\{files\.length\} imagen</span>{files.length === 1 ? "" : "es"} añadida${
+        files.length === 1 ? "" : "s"
+      }`,
+      description: `Se han añadido <span class="math-inline">\{files\.length\} imagen</span>{
+        files.length === 1 ? "" : "es"
+      } correctamente`,
     });
-  };
-
-  const rejectCurrentImage = () => {
-    if (pendingImages.length === 0 || currentImageIndex >= pendingImages.length)
-      return;
-
-    URL.revokeObjectURL(pendingImages[currentImageIndex].url);
-
-    if (currentImageIndex < pendingImages.length - 1) {
-      setCurrentImageIndex(currentImageIndex + 1);
-    } else {
-      closeImageDialog();
-    }
-  };
-
-  const closeImageDialog = () => {
-    pendingImages.forEach((img, index) => {
-      if (index >= currentImageIndex) {
-        URL.revokeObjectURL(img.url);
-      }
-    });
-
-    setIsImageDialogOpen(false);
-    setPendingImages([]);
-    setCurrentImageIndex(0);
   };
 
   const removeImage = (index: number) => {
@@ -277,7 +235,11 @@ export function TourForm({
                 </SelectTrigger>
                 <SelectContent>
                   {CATEGORIES.map((category) => (
-                    <SelectItem key={category} value={category}>
+                    <SelectItem
+                      key={category}
+                      value={category}
+                      className="bg-white"
+                    >
                       {category}
                     </SelectItem>
                   ))}
@@ -403,7 +365,7 @@ export function TourForm({
                     className="w-full justify-between"
                   >
                     {selectedLanguages.length > 0
-                      ? `${selectedLanguages.length} idioma${
+                      ? `<span class="math-inline">\{selectedLanguages\.length\} idioma</span>{
                           selectedLanguages.length > 1 ? "s" : ""
                         } seleccionado${
                           selectedLanguages.length > 1 ? "s" : ""
@@ -569,48 +531,6 @@ export function TourForm({
           </form>
         </CardContent>
       </Card>
-
-      <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Confirmar imagen</DialogTitle>
-          </DialogHeader>
-
-          {pendingImages.length > 0 &&
-            currentImageIndex < pendingImages.length && (
-              <div className="flex flex-col items-center space-y-4">
-                <div className="relative w-full h-64 bg-muted rounded-md overflow-hidden">
-                  <Image
-                    src={
-                      pendingImages[currentImageIndex].url || "/placeholder.svg"
-                    }
-                    alt="Vista previa de imagen"
-                    className="w-full h-full object-contain"
-                    width={400}
-                    height={400}
-                  />
-                </div>
-
-                <div className="text-center text-sm text-muted-foreground">
-                  Imagen {currentImageIndex + 1} de {pendingImages.length}
-                </div>
-
-                <div className="flex justify-center gap-4 w-full">
-                  <Button variant="outline" onClick={rejectCurrentImage}>
-                    Rechazar
-                  </Button>
-                  <Button onClick={confirmCurrentImage}>Aceptar y subir</Button>
-                </div>
-              </div>
-            )}
-
-          <DialogFooter className="sm:justify-start">
-            <Button variant="secondary" onClick={closeImageDialog}>
-              Cancelar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

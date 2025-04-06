@@ -1,11 +1,11 @@
 import CardWrapper from "@/app/components/card-wrapper";
 import TourList from "@/app/components/TourList";
-import {mockService} from "@/lib/mock-service";
-import {Suspense} from "react";
-import {LoadingIndicator} from "@/app/components/ui/LoadingIndicator";
+import { mockService } from "@/lib/mock-service";
+import { Suspense } from "react";
+import { LoadingIndicator } from "@/app/components/ui/LoadingIndicator";
 
 async function getTours() {
-  return mockService.getTours()
+  return mockService.getTours();
 }
 
 export default async function DashboardPage() {
@@ -24,5 +24,5 @@ export default async function DashboardPage() {
         <TourList />
       </Suspense>
     </div>
-  )
+  );
 }
