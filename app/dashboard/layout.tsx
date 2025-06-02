@@ -1,27 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { mockService } from "@/lib/mock-service";
+import React, { useState } from "react";
 import Link from "next/link";
 import { Button } from "../components/ui/button";
 import { LogOut, Menu } from "lucide-react";
 import { LogoutButton } from "@/app/components/logout-button";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(true);
-
-  useEffect(() => {
-    async function fetchUser() {
-      const userData = await mockService.getCurrentUser();
-      setUser(userData);
-    }
-    fetchUser();
-  }, []);
-
-  if (!user) {
-    return <div className="flex justify-center items-center min-h-screen">Cargando...</div>;
-  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -35,11 +21,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="p-4 border-b">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 rounded-full bg-[#FFE8E8] flex items-center justify-center">
-                <span className="text-[#FF5A5F] font-semibold">{user.name.charAt(0)}</span>
+                <span className="text-[#FF5A5F] font-semibold">U</span>
               </div>
               <div>
-                <p className="font-medium text-gray-900">{user.name}</p>
-                <p className="text-sm text-gray-500">{user.email}</p>
+                <p className="font-medium text-gray-900">Usuario</p>
+                <p className="text-sm text-gray-500">usuario@email.com</p>
               </div>
             </div>
           </div>

@@ -9,6 +9,7 @@ import { Input } from "../components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
 import { Label } from "../components/ui/label"
 import { login } from "@/lib/auth"
+import {userService} from "@/lib/userService";
 
 export default function LoginPage() {
   const router = useRouter()
@@ -24,9 +25,11 @@ export default function LoginPage() {
     const email = formData.get("email") as string
     const password = formData.get("password") as string
 
-    const result = await login(email, password)
+    const result = await userService.login({email, password});
 
-    if (result.success) {
+    console.log("Login result:", result)
+
+    if (result.statusCode !== 404 || result.statusCode !== 401) {
       router.push("/dashboard")
       router.refresh()
     } else {

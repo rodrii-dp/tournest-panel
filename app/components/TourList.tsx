@@ -16,11 +16,12 @@ import {
   TableRow,
 } from "@/app/components/ui/table";
 import { DeleteTourButton } from "@/app/components/delete-tour-button";
-import { mockService } from "@/lib/mock-service";
 import Image from "next/image";
+import {Tour} from "@/types";
+import {tourService} from "@/lib/tourService";
 
 async function getTours() {
-  return mockService.getTours();
+  return tourService.getTours();
 }
 
 export default async function TourList() {
@@ -51,8 +52,8 @@ export default async function TourList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {tours.map((tour) => (
-              <TableRow key={tour.id} className="hover:bg-gray-50">
+            {tours.map((tour: Tour) => (
+              <TableRow key={tour._id} className="hover:bg-gray-50">
                 <TableCell>
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
@@ -72,7 +73,7 @@ export default async function TourList() {
                       <div className="font-medium text-gray-900">
                         {tour.title}
                       </div>
-                      <div className="text-sm text-gray-500">ID: {tour.id}</div>
+                      <div className="text-sm text-gray-500">ID: {tour._id}</div>
                     </div>
                   </div>
                 </TableCell>
@@ -113,7 +114,7 @@ export default async function TourList() {
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-2">
-                    <Link href={`/dashboard/tours/${tour.id}`}>
+                    <Link href={`/dashboard/tours/${tour._id}`}>
                       <Button
                         variant="outline"
                         size="sm"
@@ -122,7 +123,7 @@ export default async function TourList() {
                         Editar
                       </Button>
                     </Link>
-                    <DeleteTourButton id={tour.id} />
+                    <DeleteTourButton id={tour._id} />
                   </div>
                 </TableCell>
               </TableRow>

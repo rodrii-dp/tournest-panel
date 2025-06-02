@@ -1,11 +1,11 @@
 import CardWrapper from "@/app/components/card-wrapper";
 import TourList from "@/app/components/TourList";
-import { mockService } from "@/lib/mock-service";
 import { Suspense } from "react";
 import { LoadingIndicator } from "@/app/components/ui/LoadingIndicator";
+import {tourService} from "@/lib/tourService";
 
 async function getTours() {
-  return mockService.getTours();
+  return tourService.getTours();
 }
 
 export default async function DashboardPage() {

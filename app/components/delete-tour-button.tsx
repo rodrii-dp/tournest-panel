@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "../components/ui/button"
-import { mockService } from "@/lib/mock-service"
+import {tourService} from "@/lib/tourService";
 
 export function DeleteTourButton({ id }: { id: string }) {
   const router = useRouter()
@@ -16,7 +16,7 @@ export function DeleteTourButton({ id }: { id: string }) {
 
     try {
       setIsDeleting(true)
-      await mockService.deleteTour(id)
+      await tourService.deleteTour(id)
       router.refresh()
     } catch (error) {
       console.error("Error al eliminar el tour:", error)

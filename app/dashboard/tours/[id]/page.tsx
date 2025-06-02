@@ -1,11 +1,11 @@
 import { notFound, redirect } from "next/navigation";
-import { mockService } from "@/lib/mock-service";
 import { TourForm } from "../../../components/tour-form";
 import { Tour } from "@/types";
+import {tourService} from "@/lib/tourService";
 
 async function getTour(id: string) {
   try {
-    return await mockService.getTourById(id);
+    return await tourService.getTourById(id);
   } catch (error) {
     return null;
   }
@@ -58,7 +58,16 @@ export default async function TourPage({ params }: { params: { id: string } }) {
     notFound();
   }
 
-  const handleSubmit = async (data: Tour & { images?: File[] }) => {
+  const handleSubmit = async (data: {
+    category: string;
+    title: string;
+    description: string;
+    duration: string;
+    language: string[];
+    price: { value: number; basedOnTips?: boolean };
+    meetingPoint: string;
+    images?: File[];
+  }) => {
     "use server";
     const imageUrls: string[] = [];
 
@@ -68,31 +77,27 @@ export default async function TourPage({ params }: { params: { id: string } }) {
         if (imageUrl) {
           imageUrls.push(imageUrl);
         } else {
-          // Handle upload failure - maybe show an error to the user
           console.error("Failed to upload one or more images.");
-          return; // Or handle differently
+          return;
         }
       }
     }
 
-    const tourData: Omit<Tour, "id" | "images"> & { images: string[] } = {
-      title: data.title,
-      category: data.category,
-      description: data.description,
-      duration: data.duration,
+    const images = imageUrls.map((url) => ({ imageUrl: url }));
+
+    const tourData = {
+      ...data,
       price: {
-        value: data.price.value,
-        basedOnTips: data.price.basedOnTips,
+        ...data.price,
+        basedOnTips: data.price.basedOnTips ?? false,
       },
-      meetingPoint: data.meetingPoint,
-      language: data.language,
-      images: imageUrls,
+      images,
     };
 
     if (isNewTour) {
-      await mockService.createTour(tourData);
+      await tourService.createTour(tourData);
     } else {
-      await mockService.updateTour(id, tourData);
+      await tourService.updateTour(id, tour?.provider?._id ?? "", tourData);
     }
     redirect("/dashboard/tours");
   };
