@@ -63,7 +63,7 @@ export default function LoginPage() {
 
             <div className="text-center text-sm">
               <span className="text-gray-600">¿No tienes cuenta? </span>
-              <Link href="/login" className="text-blue-600 hover:underline">
+              <Link href="/register" className="text-blue-600 hover:underline">
                 Regístrate como proveedor
               </Link>
             </div>
