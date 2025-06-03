@@ -432,7 +432,7 @@ export default function TourForm({ params, initialData, onSubmit, isSubmitting: 
             date: item.date,
             hours: item.hours ?? [],
           })),
-          imageUrls: uploadedImageUrls, // URLs de Cloudinary
+          images: uploadedImageUrls.map(url => ({imageUrl: url})), // URLs de Cloudinary
         };
 
         if (isEditing && resolvedParams) {
