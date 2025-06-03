@@ -25,7 +25,7 @@ export interface LoginData {
 export interface LoginResponse {
   access_token: string;
   refresh_token: string;
-  user: never;
+  user: { name: string; email: string };
 }
 
 export const register = async (
@@ -40,5 +40,6 @@ export const register = async (
 
 export const login = async (data: LoginData): Promise<LoginResponse> => {
   const response = await apiClient.post<LoginResponse>('/auth/login', data);
+  localStorage.setItem('user', JSON.stringify(response.data.user));
   return response.data;
 };

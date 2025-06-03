@@ -64,6 +64,7 @@ apiClient.interceptors.response.use(
             // Si el refresh token es inválido, eliminar ambos tokens
             localStorage.removeItem('access_token');
             localStorage.removeItem('refresh_token');
+            window.location.href = '/login';
           }
         }
       }

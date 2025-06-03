@@ -24,6 +24,9 @@ export const userService = {
   login: async (credentials: { email: string; password: string }) => {
     console.log("Logging in with credentials:", credentials)
     const response = await apiClient.post("/auth/login", credentials)
+    if (response.data.user) {
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+    }
     return response.data
   },
 };
