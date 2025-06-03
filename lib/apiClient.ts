@@ -32,7 +32,11 @@ apiClient.interceptors.response.use(
   async error => {
     const originalRequest = error.config;
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      typeof window !== "undefined"
+    ) {
       originalRequest._retry = true;
 
       try {
@@ -62,9 +66,11 @@ apiClient.interceptors.response.use(
             refreshError.response?.status === 403
           ) {
             // Si el refresh token es inválido, eliminar ambos tokens
-            localStorage.removeItem('access_token');
-            localStorage.removeItem('refresh_token');
-            window.location.href = '/login';
+            if (typeof window !== "undefined") {
+              localStorage.removeItem('access_token');
+              localStorage.removeItem('refresh_token');
+              window.location.href = '/login';
+            }
           }
         }
       }
