@@ -400,7 +400,6 @@ export default function TourForm({ params, initialData, onSubmit, isSubmitting: 
           }
         }
 
-        // Luego, envía los datos del tour junto con las URLs de las imágenes
         const tourData = {
           title: data.title,
           category: data.category,
@@ -409,10 +408,14 @@ export default function TourForm({ params, initialData, onSubmit, isSubmitting: 
           price: {
             value: data.price.value,
             basedOnTips: data.price.basedOnTips,
+            discount: data.price.discount,
           },
           meetingPoint: data.meetingPoint,
           language: data.language,
-          imageUrls: uploadedImageUrls, // Usar las URLs de Cloudinary
+          location: data.location,
+          stops: data.stops,
+          nonAvailableDates: data.nonAvailableDates,
+          imageUrls: uploadedImageUrls, // URLs de Cloudinary
         };
 
         const endpoint = isEditing && resolvedParams
