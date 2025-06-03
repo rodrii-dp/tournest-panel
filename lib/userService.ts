@@ -30,6 +30,12 @@ export const userService = {
     if (response.data.provider) {
       localStorage.setItem('provider', JSON.stringify(response.data.provider));
     }
+    if (response.data.access_token) {
+      localStorage.setItem('access_token', response.data.access_token);
+    }
+    if (response.data.refresh_token) {
+      localStorage.setItem('refresh_token', response.data.refresh_token);
+    }
     return response.data
   },
 };
