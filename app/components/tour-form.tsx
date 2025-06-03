@@ -51,6 +51,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "../components/ui/use-toast";
 import Image from "next/image";
 import { use } from "react";
+import {tourService} from "@/lib/tourService";
 
 const CATEGORIES = [
   "Cultural",
@@ -400,6 +401,19 @@ export default function TourForm({ params, initialData, onSubmit, isSubmitting: 
           }
         }
 
+        const discount =
+          data.price.discount &&
+          data.price.discount.type &&
+          typeof data.price.discount.amount === "number"
+            ? {
+              type: data.price.discount.type,
+              amount: data.price.discount.amount,
+              description: data.price.discount.description,
+              validFrom: data.price.discount.validFrom,
+              validTo: data.price.discount.validTo,
+            }
+            : undefined;
+
         const tourData = {
           title: data.title,
           category: data.category,
@@ -407,32 +421,24 @@ export default function TourForm({ params, initialData, onSubmit, isSubmitting: 
           duration: data.duration,
           price: {
             value: data.price.value,
-            basedOnTips: data.price.basedOnTips,
-            discount: data.price.discount,
+            basedOnTips: data.price.basedOnTips ?? false,
+            ...(discount ? { discount } : {}),
           },
           meetingPoint: data.meetingPoint,
           language: data.language,
           location: data.location,
           stops: data.stops,
-          nonAvailableDates: data.nonAvailableDates,
+          nonAvailableDates: data.nonAvailableDates?.map((item) => ({
+            date: item.date,
+            hours: item.hours ?? [],
+          })),
           imageUrls: uploadedImageUrls, // URLs de Cloudinary
         };
 
-        const endpoint = isEditing && resolvedParams
-          ? `/api/tours/${resolvedParams.action}`
-          : "/api/tours";
-        const method = isEditing ? "PUT" : "POST";
-
-        const tourResponse = await fetch(endpoint, {
-          method,
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(tourData),
-        });
-
-        if (!tourResponse.ok) {
-          throw new Error("Error al guardar el tour");
+        if (isEditing && resolvedParams) {
+          await tourService.updateTour(resolvedParams.action, "", tourData);
+        } else {
+          await tourService.createTour(tourData);
         }
 
         toast({
