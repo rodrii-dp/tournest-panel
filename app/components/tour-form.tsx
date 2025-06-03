@@ -254,9 +254,6 @@ export default function TourForm({ params, initialData, onSubmit, isSubmitting: 
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
-    // Liberar URLs blob anteriores antes de crear nuevas
-    imagePreviews.forEach((url) => URL.revokeObjectURL(url));
-
     // Crear previsualizaciones para las imágenes seleccionadas
     const newPendingImages = files.map((file) => ({
       file,
@@ -332,7 +329,6 @@ export default function TourForm({ params, initialData, onSubmit, isSubmitting: 
     setValue("images", newFiles);
     setImageFiles(newFiles);
 
-    // Liberar la URL blob de la imagen eliminada
     URL.revokeObjectURL(imagePreviews[index]);
     const newPreviews = [...imagePreviews];
     newPreviews.splice(index, 1);
@@ -774,7 +770,7 @@ export default function TourForm({ params, initialData, onSubmit, isSubmitting: 
                     variant="outline"
                     className="w-full"
                     onClick={() => {
-                      // Limpiar todas las imágenes y liberar blobs
+                      // Limpiar todas las imágenes
                       setImageFiles([]);
                       setImagePreviews((prev) => {
                         prev.forEach((url) => URL.revokeObjectURL(url));
@@ -783,4 +779,89 @@ export default function TourForm({ params, initialData, onSubmit, isSubmitting: 
                       setValue("images", []);
                       toast({
                         title: "Imágenes eliminadas",
-                        description: "Todas las imágenes han sido
+                        description: "Todas las imágenes han sido eliminadas",
+                      });
+                    }}
+                  >
+                    Eliminar todas las imágenes
+                  </Button>
+                )}
+              </div>
+
+              {errors.images && (
+                <p className="text-sm text-destructive">
+                  {errors.images.message}
+                </p>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-4 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => router.back()}
+                disabled={isSubmittingState}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isSubmittingState}>
+                {isSubmittingState ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {isEditing ? "Guardando..." : "Creando..."}
+                  </>
+                ) : isEditing ? (
+                  "Guardar cambios"
+                ) : (
+                  "Crear tour"
+                )}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirmar imagen</DialogTitle>
+          </DialogHeader>
+
+          {pendingImages.length > 0 &&
+            currentImageIndex < pendingImages.length && (
+              <div className="flex flex-col items-center space-y-4">
+                <div className="relative w-full h-64 bg-muted rounded-md overflow-hidden">
+                  <Image
+                    src={
+                      pendingImages[currentImageIndex].url || "/placeholder.svg"
+                    }
+                    alt="Vista previa de imagen"
+                    className="w-full h-full object-contain"
+                    width={400}
+                    height={400}
+                  />
+                </div>
+
+                <div className="text-center text-sm text-muted-foreground">
+                  Imagen {currentImageIndex + 1} de {pendingImages.length}
+                </div>
+
+                <div className="flex justify-center gap-4 w-full">
+                  <Button variant="outline" onClick={rejectCurrentImage}>
+                    Rechazar
+                  </Button>
+                  <Button onClick={confirmCurrentImage}>Aceptar y subir</Button>
+                </div>
+              </div>
+            )}
+
+          <DialogFooter className="sm:justify-start">
+            <Button variant="secondary" onClick={closeImageDialog}>
+              Cancelar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
