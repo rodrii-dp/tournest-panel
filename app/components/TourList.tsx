@@ -26,7 +26,7 @@ export default function TourList({tours}: {tours: Tour[]}) {
     <Card className="bg-white">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-xl">Mis Tours</CardTitle>
-        <Link href="/dashboard/tours/new">
+        <Link href="/dashboard/new">
           <Button className="bg-[#FF5A5F] hover:bg-[#E00007]">
             <Plus className="mr-2 h-4 w-4" />
             Nuevo Tour

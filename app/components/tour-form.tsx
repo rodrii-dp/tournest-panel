@@ -1,8 +1,8 @@
 "use client";
 
 import type React from "react";
-import type { ReactNode } from "react";
-
+import { useFieldArray } from "react-hook-form";
+import { Plus } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -84,9 +84,34 @@ const tourSchema = z.object({
   price: z.object({
     value: z.number().min(0, "El precio debe ser un número positivo"),
     basedOnTips: z.boolean().optional(),
+    discount: z.object({
+      type: z.enum(["porcentaje", "valor"]).optional(),
+      amount: z.number().optional(),
+      description: z.string().optional(),
+      validFrom: z.string().optional(),
+      validTo: z.string().optional(),
+    }).optional(),
   }),
   meetingPoint: z.string().min(1, "El punto de encuentro es requerido"),
   language: z.array(z.string()).min(1, "Debes seleccionar al menos un idioma"),
+  location: z.object({
+    name: z.string().min(1, "La ciudad es requerida"),
+    country: z.string().min(1, "El país es requerido"),
+  }),
+  stops: z.array(z.object({
+    stopName: z.string(),
+    location: z.object({
+      lat: z.number(),
+      lng: z.number(),
+      direction: z.string(),
+    }),
+  })).optional(),
+  nonAvailableDates: z.array(
+    z.object({
+      date: z.string().min(1, "La fecha es requerida"),
+      hours: z.array(z.string()).optional(),
+    })
+  ).optional(),
   images: z.array(z.instanceof(File)).optional(),
 });
 
@@ -162,6 +187,7 @@ export default function TourForm({ params, initialData, onSubmit, isSubmitting: 
     watch,
     formState: { errors },
     reset,
+    control,
   } = useForm<TourFormValues>({
     resolver: zodResolver(tourSchema),
     defaultValues: {
@@ -175,8 +201,19 @@ export default function TourForm({ params, initialData, onSubmit, isSubmitting: 
       },
       meetingPoint: initialData?.meetingPoint || "",
       language: initialData?.language || [],
+      location: {name: "", country: ""},
       images: [],
     },
+  });
+
+  const { fields: stopFields, append: appendStop, remove: removeStop } = useFieldArray({
+    control,
+    name: "stops",
+  });
+
+  const { fields: nonAvailableFields, append: appendNonAvailable, remove: removeNonAvailable } = useFieldArray({
+    control,
+    name: "nonAvailableDates",
   });
 
   const watchedLanguages = watch("language");
@@ -482,36 +519,38 @@ export default function TourForm({ params, initialData, onSubmit, isSubmitting: 
               )}
             </div>
 
+            {/* Duración y Precio */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="duration">Duración</Label>
-                <Input
-                  id="duration"
-                  {...register("duration")}
-                  placeholder="Ej: 2 horas"
-                />
-                {errors.duration && (
-                  <p className="text-sm text-destructive">
-                    {errors.duration.message}
-                  </p>
-                )}
+                <Input id="duration" {...register("duration")} />
+                {errors.duration && <p className="text-sm text-destructive">{errors.duration.message}</p>}
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="price">Precio (€)</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  {...register("price.value", { valueAsNumber: true })}
-                  placeholder="0.00"
-                />
-                {errors.price?.value && (
-                  <p className="text-sm text-destructive">
-                    {errors.price.value.message}
-                  </p>
-                )}
+                <Input id="price" type="number" min="0" step="0.01" {...register("price.value", { valueAsNumber: true })} />
+                {errors.price?.value && <p className="text-sm text-destructive">{errors.price.value.message}</p>}
+              </div>
+            </div>
+            {/* Descuento */}
+            <div className="space-y-2">
+              <Label>Descuento</Label>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Select onValueChange={v => setValue("price.discount.type", v as "porcentaje" | "valor")}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="porcentaje">Porcentaje</SelectItem>
+                    <SelectItem value="valor">Valor</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Input type="number" placeholder="Cantidad" {...register("price.discount.amount", { valueAsNumber: true })} />
+                <Input placeholder="Descripción" {...register("price.discount.description")} />
+              </div>
+              <div className="grid grid-cols-2 gap-4 mt-2">
+                <Input type="date" placeholder="Desde" {...register("price.discount.validFrom")} />
+                <Input type="date" placeholder="Hasta" {...register("price.discount.validTo")} />
               </div>
             </div>
 
@@ -605,6 +644,59 @@ export default function TourForm({ params, initialData, onSubmit, isSubmitting: 
               {errors.language && (
                 <p className="text-sm text-destructive">
                   {errors.language.message}
+                </p>
+              )}
+            </div>
+
+            {/* Ubicación */}
+            <div className="space-y-2">
+              <Label>Ubicación</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <Input placeholder="Ciudad" {...register("location.name")} />
+                <Input placeholder="País" {...register("location.country")} />
+              </div>
+            </div>
+            {/* Paradas */}
+            <div className="space-y-2">
+              <Label>Paradas</Label>
+              {stopFields.map((field, idx) => (
+                <div key={field.id} className="grid grid-cols-1 md:grid-cols-5 gap-2 items-end mb-2">
+                  <Input placeholder="Nombre" {...register(`stops.${idx}.stopName` as const)} />
+                  <Input type="number" step="any" placeholder="Lat" {...register(`stops.${idx}.location.lat` as const, { valueAsNumber: true })} />
+                  <Input type="number" step="any" placeholder="Lng" {...register(`stops.${idx}.location.lng` as const, { valueAsNumber: true })} />
+                  <Input placeholder="Dirección" {...register(`stops.${idx}.location.direction` as const)} />
+                  <Button type="button" variant="destructive" onClick={() => removeStop(idx)}><X className="h-4 w-4" /></Button>
+                </div>
+              ))}
+              <Button type="button" variant="outline" onClick={() => appendStop({ stopName: "", location: { lat: 0, lng: 0, direction: "" } })}>
+                <Plus className="h-4 w-4 mr-1" /> Añadir parada
+              </Button>
+              {errors.stops && (
+                <p className="text-sm text-destructive">
+                  {Array.isArray(errors.stops)
+                    ? errors.stops.map((err, i) => err?.message && <span key={i}>{err.message}</span>)
+                    : (errors.stops as { message?: string })?.message}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Fechas no disponibles</Label>
+              {nonAvailableFields.map((field, idx) => (
+                <div key={field.id} className="grid grid-cols-1 md:grid-cols-3 gap-2 items-end mb-2">
+                  <Input type="date" {...register(`nonAvailableDates.${idx}.date` as const)} />
+                  <Input placeholder="Horas (ej: 10:00,12:00)" {...register(`nonAvailableDates.${idx}.hours.0` as const)} />
+                  <Button type="button" variant="destructive" onClick={() => removeNonAvailable(idx)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              <Button type="button" variant="outline" onClick={() => appendNonAvailable({ date: "", hours: [] })}>
+                <Plus className="h-4 w-4 mr-1" /> Añadir fecha no disponible
+              </Button>
+              {errors.nonAvailableDates && (
+                <p className="text-sm text-destructive">
+                  {(errors.nonAvailableDates as { message?: string })?.message}
                 </p>
               )}
             </div>
