@@ -4,6 +4,7 @@ export interface RegisterData {
   name: string;
   email: string;
   password: string;
+  role: "cliente" | "proveedor";
   providerData: {
     name: string;
     direction: string;

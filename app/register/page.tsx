@@ -38,6 +38,7 @@ export default function RegisterProviderPage() {
         name,
         email,
         password,
+        role: "proveedor",
         providerData,
       })
       router.push("/login")
