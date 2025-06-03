@@ -4,6 +4,11 @@ export interface RegisterData {
   name: string;
   email: string;
   password: string;
+  providerData: {
+    name: string;
+    direction: string;
+    contact: string;
+  };
 }
 
 export interface RegisterResponse {

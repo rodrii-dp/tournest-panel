@@ -1,15 +1,27 @@
+// app/dashboard/page.tsx (client component)
+
+"use client";
+
 import CardWrapper from "@/app/components/card-wrapper";
 import TourList from "@/app/components/TourList";
-import { Suspense } from "react";
+import { useEffect, useState } from "react";
 import { LoadingIndicator } from "@/app/components/ui/LoadingIndicator";
-import {tourService} from "@/lib/tourService";
+import { tourService } from "@/lib/tourService";
 
-async function getTours() {
-  return tourService.getTours();
-}
+export default function DashboardPage() {
+  const [tours, setTours] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-export default async function DashboardPage() {
-  const tours = await getTours();
+  useEffect(() => {
+    tourService.getTours()
+      .then(setTours)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return <LoadingIndicator progress={0} />;
+  }
 
   return (
     <div className="space-y-6">
@@ -20,9 +32,7 @@ export default async function DashboardPage() {
         <CardWrapper title="Rating Promedio" content="4.8" />
       </div>
 
-      <Suspense fallback={<LoadingIndicator progress={0} />}>
-        <TourList />
-      </Suspense>
+      <TourList tours={tours} />
     </div>
   );
 }

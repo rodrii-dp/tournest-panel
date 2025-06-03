@@ -1,6 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { TourForm } from "../../../components/tour-form";
-import { Tour } from "@/types";
+import TourForm from "../../../components/tour-form";
 import {tourService} from "@/lib/tourService";
 
 async function getTour(id: string) {
@@ -47,7 +46,7 @@ async function uploadImageToCloudinary(file: File): Promise<string | null> {
   }
 }
 
-export default async function TourPage({ params }: { params: { id: string } }) {
+export default async function TourPage({ params }: { params: Promise<{id: string}> }) {
   const resolvedParams = await params;
   const { id } = resolvedParams;
 

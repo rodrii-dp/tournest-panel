@@ -1,43 +1,80 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
+import type { ReactNode } from "react";
 
-import { useEffect, useState, useRef } from "react"
-import { useForm, useFieldArray } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import * as z from "zod"
-import { Button } from "../components/ui/button"
-import { Input } from "../components/ui/input"
-import { Textarea } from "../components/ui/textarea"
-import { Label } from "../components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select"
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "../components/ui/command"
-import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover"
-import { Check, X, Loader2, Upload, Plus, MapPin, Calendar, Trash2 } from "lucide-react"
-import { Badge } from "../components/ui/badge"
-import { cn } from "../../lib/utils"
-import { toast } from "../components/ui/use-toast"
+import { useEffect, useState, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Textarea } from "../components/ui/textarea";
+import { Label } from "../components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "../components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "../components/ui/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "../components/ui/dialog";
+import { Check, X, Loader2, Upload } from "lucide-react";
+import { Badge } from "../components/ui/badge";
+import { cn } from "@/lib/utils";
+import { toast } from "../components/ui/use-toast";
+import Image from "next/image";
+import { use } from "react";
 
-import Image from "next/image"
-import {Checkbox} from "@/app/components/ui/checkbox";
+const CATEGORIES = [
+  "Cultural",
+  "Gastronómico",
+  "Histórico",
+  "Aventura",
+  "Naturaleza",
+  "Arquitectónico",
+  "Artístico",
+  "Nocturno",
+  "Familiar",
+];
 
-const CATEGORIES = ["gastronomía", "historia", "aventura", "naturaleza", "otros"]
-
-const LANGUAGES = ["Español", "Inglés", "Francés", "Alemán", "Italiano", "Portugués", "Chino", "Japonés", "Ruso"]
-
-const COUNTRIES = [
-  "España",
-  "Francia",
-  "Italia",
-  "Alemania",
-  "Portugal",
-  "Reino Unido",
-  "Países Bajos",
-  "Bélgica",
-  "Suiza",
-  "Austria",
-]
+const LANGUAGES = [
+  "Español",
+  "Inglés",
+  "Francés",
+  "Alemán",
+  "Italiano",
+  "Portugués",
+  "Chino",
+  "Japonés",
+  "Ruso",
+];
 
 const tourSchema = z.object({
   title: z.string().min(1, "El título es requerido"),
@@ -47,191 +84,338 @@ const tourSchema = z.object({
   price: z.object({
     value: z.number().min(0, "El precio debe ser un número positivo"),
     basedOnTips: z.boolean().optional(),
-    discount: z
-      .object({
-        type: z.enum(["porcentaje", "valor"]).optional(),
-        amount: z.number().optional(),
-        description: z.string().optional(),
-        validFrom: z.string().optional(),
-        validTo: z.string().optional(),
-      })
-      .optional(),
   }),
   meetingPoint: z.string().min(1, "El punto de encuentro es requerido"),
   language: z.array(z.string()).min(1, "Debes seleccionar al menos un idioma"),
-  location: z.object({
-    name: z.string().min(1, "El nombre de la ubicación es requerido"),
-    country: z.string().min(1, "El país es requerido"),
-  }),
-  stops: z
-    .array(
-      z.object({
-        location: z.object({
-          lat: z.number(),
-          lng: z.number(),
-          direction: z.string(),
-        }),
-        stopName: z.string().min(1, "El nombre de la parada es requerido"),
-      }),
-    )
-    .optional(),
   images: z.array(z.instanceof(File)).optional(),
-  nonAvailableDates: z
-    .array(
-      z.object({
-        date: z.string(),
-        hours: z.array(z.string()),
-      }),
-    )
-    .optional(),
-})
+});
 
-type TourFormValues = z.infer<typeof tourSchema>
+type TourFormValues = z.infer<typeof tourSchema>;
 
-interface TourFormProps {
-  initialData?: Partial<TourFormValues>
-  onSubmit: (data: TourFormValues) => Promise<void>
-  isSubmitting: boolean
-  isEditing?: boolean
+interface ImagePreview {
+  file: File;
+  url: string;
 }
 
-export function TourForm({ initialData, onSubmit, isSubmitting, isEditing = false }: TourFormProps) {
+interface TourFormProps {
+  // Pattern 1: Simple usage with params (existing)
+  params?: Promise<{
+    action: string;
+  }>;
+
+  // Pattern 2: Complex usage with external state management (new)
+  initialData?: {
+    category: string;
+    title: string;
+    description: string;
+    duration: string;
+    language: string[];
+    price: { value: number; basedOnTips?: boolean };
+    meetingPoint: string;
+    images?: { imageUrl: string }[];
+    provider?: { _id: string };
+  };
+  onSubmit?: (data: {
+    category: string;
+    title: string;
+    description: string;
+    duration: string;
+    language: string[];
+    price: { value: number; basedOnTips?: boolean };
+    meetingPoint: string;
+    images?: File[];
+  }) => Promise<void>;
+  isSubmitting?: boolean;
+}
+
+export default function TourForm({ params, initialData, onSubmit, isSubmitting: externalIsSubmitting }: TourFormProps) {
+  const router = useRouter();
+
+  // Determine which pattern is being used
+  const isExternalMode = !params && (initialData !== undefined || onSubmit !== undefined);
+
+  // Handle params resolution only if params is provided
+  const resolvedParams = params ? use(params) : null;
+  const isEditing = isExternalMode ? !!initialData : (resolvedParams?.action !== "new");
+
+  // Use external isSubmitting if provided, otherwise use internal state
+  const [internalIsSubmitting, setInternalIsSubmitting] = useState(false);
+  const isSubmittingState = isExternalMode ? (externalIsSubmitting ?? false) : internalIsSubmitting;
+
+  const [selectedLanguages, setSelectedLanguages] = useState<string[]>(
+    initialData?.language || []
+  );
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [languagePopoverOpen, setLanguagePopoverOpen] = useState(false);
+
+  const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
+  const [pendingImages, setPendingImages] = useState<ImagePreview[]>([]);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const {
     register,
     handleSubmit,
     setValue,
     watch,
-    control,
     formState: { errors },
     reset,
   } = useForm<TourFormValues>({
     resolver: zodResolver(tourSchema),
-    defaultValues: initialData || {
-      title: "",
-      category: "",
-      description: "",
-      duration: "",
+    defaultValues: {
+      title: initialData?.title || "",
+      category: initialData?.category || "",
+      description: initialData?.description || "",
+      duration: initialData?.duration || "",
       price: {
-        value: 0,
-        basedOnTips: false,
+        value: initialData?.price?.value || 0,
+        basedOnTips: initialData?.price?.basedOnTips || false,
       },
-      meetingPoint: "",
-      language: [],
-      location: {
-        name: "",
-        country: "",
-      },
-      stops: [],
+      meetingPoint: initialData?.meetingPoint || "",
+      language: initialData?.language || [],
       images: [],
-      nonAvailableDates: [],
     },
-  })
+  });
 
-  const {
-    fields: stopFields,
-    append: appendStop,
-    remove: removeStop,
-  } = useFieldArray({
-    control,
-    name: "stops",
-  })
+  const watchedLanguages = watch("language");
 
-  const {
-    fields: dateFields,
-    append: appendDate,
-    remove: removeDate,
-  } = useFieldArray({
-    control,
-    name: "nonAvailableDates",
-  })
-
-  const [selectedLanguages, setSelectedLanguages] = useState<string[]>(initialData?.language || [])
-  const [imageFiles, setImageFiles] = useState<File[]>([])
-  const [imagePreviews, setImagePreviews] = useState<string[]>([])
-  const [languagePopoverOpen, setLanguagePopoverOpen] = useState(false)
-  const [showDiscount, setShowDiscount] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-
+  // Only run this effect in internal mode (when params is provided)
   useEffect(() => {
-    if (initialData) {
-      reset(initialData)
-      if (initialData.language) {
-        setSelectedLanguages(initialData.language)
-      }
-      if (initialData.images && Array.isArray(initialData.images)) {
-        setImageFiles(initialData.images as File[])
-        setImagePreviews(initialData.images.map((file) => URL.createObjectURL(file)))
-        setValue("images", initialData.images)
-      }
-      if (initialData.price?.discount) {
-        setShowDiscount(true)
-      }
+    if (!isExternalMode && isEditing && resolvedParams) {
+      const fetchTour = async () => {
+        try {
+          const response = await fetch(`/api/tours/${resolvedParams.action}`);
+          if (!response.ok) throw new Error("No se pudo cargar el tour");
+
+          const tourData = await response.json();
+
+          reset({
+            title: tourData.title,
+            category: tourData.category,
+            description: tourData.description,
+            duration: tourData.duration,
+            price: {
+              value: tourData.price.value,
+              basedOnTips: tourData.price.basedOnTips,
+            },
+            meetingPoint: tourData.meetingPoint,
+            language: tourData.language,
+          });
+
+          setSelectedLanguages(tourData.language);
+        } catch (error) {
+          console.error("Error fetching tour:", error);
+          toast({
+            title: "Error",
+            description: "No se pudo cargar la información del tour",
+            variant: "destructive",
+          });
+        }
+      };
+
+      fetchTour();
     }
-  }, [initialData, reset, setValue])
+  }, [isExternalMode, isEditing, resolvedParams, reset]);
 
+  // Handle file selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || [])
-    if (files.length === 0) return
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
-    const newFiles = [...imageFiles, ...files]
-    setImageFiles(newFiles)
-    const newPreviews = newFiles.map((file) => URL.createObjectURL(file))
-    setImagePreviews(newPreviews)
-    setValue("images", newFiles)
+    // Crear previsualizaciones para las imágenes seleccionadas
+    const newPendingImages = files.map((file) => ({
+      file,
+      url: URL.createObjectURL(file),
+    }));
+
+    setPendingImages(newPendingImages);
+    setCurrentImageIndex(0);
+    setIsImageDialogOpen(true);
 
     if (fileInputRef.current) {
-      fileInputRef.current.value = ""
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const confirmCurrentImage = () => {
+    if (pendingImages.length === 0 || currentImageIndex >= pendingImages.length)
+      return;
+
+    const currentImage = pendingImages[currentImageIndex];
+
+    // Añadir la imagen a las imágenes confirmadas
+    const updatedFiles = [...imageFiles, currentImage.file];
+    setImageFiles(updatedFiles);
+    setImagePreviews((prev) => [...prev, currentImage.url]);
+
+    // Actualizar el valor del formulario
+    setValue("images", updatedFiles);
+
+    // Pasar a la siguiente imagen o cerrar el diálogo si es la última
+    if (currentImageIndex < pendingImages.length - 1) {
+      setCurrentImageIndex(currentImageIndex + 1);
+    } else {
+      closeImageDialog();
     }
 
     toast({
-      title: `${files.length} imagen${files.length === 1 ? "" : "es"} añadida${files.length === 1 ? "" : "s"}`,
-      description: `Se han añadido ${files.length} imagen${files.length === 1 ? "" : "es"} correctamente`,
-    })
-  }
+      title: "Imagen añadida",
+      description: "La imagen se ha añadido correctamente",
+    });
+  };
+
+  const rejectCurrentImage = () => {
+    if (pendingImages.length === 0 || currentImageIndex >= pendingImages.length)
+      return;
+
+    URL.revokeObjectURL(pendingImages[currentImageIndex].url);
+
+    if (currentImageIndex < pendingImages.length - 1) {
+      setCurrentImageIndex(currentImageIndex + 1);
+    } else {
+      closeImageDialog();
+    }
+  };
+
+  const closeImageDialog = () => {
+    pendingImages.forEach((img, index) => {
+      if (index >= currentImageIndex) {
+        URL.revokeObjectURL(img.url);
+      }
+    });
+
+    setIsImageDialogOpen(false);
+    setPendingImages([]);
+    setCurrentImageIndex(0);
+  };
 
   const removeImage = (index: number) => {
-    const newFiles = [...imageFiles]
-    newFiles.splice(index, 1)
-    setValue("images", newFiles)
-    setImageFiles(newFiles)
-    URL.revokeObjectURL(imagePreviews[index])
-    const newPreviews = [...imagePreviews]
-    newPreviews.splice(index, 1)
-    setImagePreviews(newPreviews)
+    const newFiles = [...imageFiles];
+    newFiles.splice(index, 1);
+
+    // Update form value
+    setValue("images", newFiles);
+    setImageFiles(newFiles);
+
+    URL.revokeObjectURL(imagePreviews[index]);
+    const newPreviews = [...imagePreviews];
+    newPreviews.splice(index, 1);
+    setImagePreviews(newPreviews);
 
     toast({
       title: "Imagen eliminada",
       description: "La imagen se ha eliminado correctamente",
-    })
-  }
+    });
+  };
 
   const toggleLanguage = (language: string) => {
     setSelectedLanguages((current) => {
-      const updated = current.includes(language) ? current.filter((l) => l !== language) : [...current, language]
-      setValue("language", updated)
-      return updated
-    })
-  }
+      const updated = current.includes(language)
+        ? current.filter((l) => l !== language)
+        : [...current, language];
 
-  const addStop = () => {
-    appendStop({
-      location: {
-        lat: 0,
-        lng: 0,
-        direction: "",
-      },
-      stopName: "",
-    })
-  }
+      // Update form value
+      setValue("language", updated);
+      return updated;
+    });
+  };
 
-  const addNonAvailableDate = () => {
-    appendDate({
-      date: "",
-      hours: [],
-    })
-  }
+  const handleFormSubmit = async (data: TourFormValues) => {
+    if (isExternalMode && onSubmit) {
+      // External mode: use the provided onSubmit function
+      await onSubmit({
+        ...data,
+        images: data.images || []
+      });
+    } else {
+      // Internal mode: use existing submission logic
+      setInternalIsSubmitting(true);
 
-  const unselectedLanguages = LANGUAGES.filter((lang) => !selectedLanguages.includes(lang))
+      try {
+        console.log("HELLO");
+        const uploadedImageUrls = [];
+
+        if (data.images && data.images.length > 0) {
+          for (const file of data.images) {
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append(
+              "upload_preset",
+              process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "ml_default"
+            );
+
+            const response = await fetch(
+              `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+              {
+                method: "POST",
+                body: formData,
+              }
+            );
+
+            if (!response.ok) {
+              throw new Error("Error al subir una imagen a Cloudinary");
+            }
+
+            const result = await response.json();
+            uploadedImageUrls.push(result.secure_url);
+          }
+        }
+
+        // Luego, envía los datos del tour junto con las URLs de las imágenes
+        const tourData = {
+          title: data.title,
+          category: data.category,
+          description: data.description,
+          duration: data.duration,
+          price: {
+            value: data.price.value,
+            basedOnTips: data.price.basedOnTips,
+          },
+          meetingPoint: data.meetingPoint,
+          language: data.language,
+          imageUrls: uploadedImageUrls, // Usar las URLs de Cloudinary
+        };
+
+        const endpoint = isEditing && resolvedParams
+          ? `/api/tours/${resolvedParams.action}`
+          : "/api/tours";
+        const method = isEditing ? "PUT" : "POST";
+
+        const tourResponse = await fetch(endpoint, {
+          method,
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(tourData),
+        });
+
+        if (!tourResponse.ok) {
+          throw new Error("Error al guardar el tour");
+        }
+
+        toast({
+          title: "Éxito",
+          description: isEditing
+            ? "Tour actualizado correctamente"
+            : "Tour creado correctamente",
+        });
+
+        router.push("/dashboard");
+        router.refresh();
+      } catch (error) {
+        console.error("Error:", error);
+        toast({
+          title: "Error",
+          description: "No se pudo guardar el tour. Inténtalo de nuevo.",
+          variant: "destructive",
+        });
+      } finally {
+        setInternalIsSubmitting(false);
+      }
+    }
+  };
 
   return (
     <>
@@ -240,253 +424,170 @@ export function TourForm({ initialData, onSubmit, isSubmitting, isEditing = fals
           <CardTitle>{isEditing ? "Editar Tour" : "Nuevo Tour"}</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            {/* Información básica */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Información básica</h3>
-
-              <div className="space-y-2">
-                <Label htmlFor="title">Título</Label>
-                <Input id="title" {...register("title")} placeholder="Ej: Tour por el casco histórico" />
-                {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="category">Categoría</Label>
-                <Select onValueChange={(value) => setValue("category", value)} defaultValue={watch("category")}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecciona una categoría" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CATEGORIES.map((category) => (
-                      <SelectItem key={category} value={category} className="bg-white">
-                        {category[0].toUpperCase() + category.slice(1)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.category && <p className="text-sm text-destructive">{errors.category.message}</p>}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Descripción</Label>
-                <Textarea
-                  id="description"
-                  {...register("description")}
-                  placeholder="Describe tu tour en detalle"
-                  className="min-h-[120px]"
-                />
-                {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
-              </div>
-            </div>
-
-            {/* Ubicación */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                <MapPin className="h-5 w-5" />
-                Ubicación
-              </h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="location.name">Ciudad/Lugar</Label>
-                  <Input
-                    id="location.name"
-                    {...register("location.name")}
-                    placeholder="Ej: Madrid, Barcelona, Sevilla"
-                  />
-                  {errors.location?.name && <p className="text-sm text-destructive">{errors.location.name.message}</p>}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="location.country">País</Label>
-                  <Select
-                    onValueChange={(value) => setValue("location.country", value)}
-                    defaultValue={watch("location.country")}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona un país" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {COUNTRIES.map((country) => (
-                        <SelectItem key={country} value={country}>
-                          {country}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.location?.country && (
-                    <p className="text-sm text-destructive">{errors.location.country.message}</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="meetingPoint">Punto de encuentro</Label>
-                <Input
-                  id="meetingPoint"
-                  {...register("meetingPoint")}
-                  placeholder="Ej: Plaza Mayor, junto a la estatua"
-                />
-                {errors.meetingPoint && <p className="text-sm text-destructive">{errors.meetingPoint.message}</p>}
-              </div>
-            </div>
-
-            {/* Paradas del tour */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">Paradas del tour</h3>
-                <Button type="button" onClick={addStop} variant="outline" size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Añadir parada
-                </Button>
-              </div>
-
-              {stopFields.map((field, index) => (
-                <Card key={field.id} className="p-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <h4 className="font-medium">Parada {index + 1}</h4>
-                    <Button type="button" onClick={() => removeStop(index)} variant="outline" size="sm">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Nombre de la parada</Label>
-                      <Input {...register(`stops.${index}.stopName`)} placeholder="Ej: Catedral de Santiago" />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Dirección</Label>
-                      <Input
-                        {...register(`stops.${index}.location.direction`)}
-                        placeholder="Ej: Plaza del Obradoiro, s/n"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Latitud</Label>
-                      <Input
-                        type="number"
-                        step="any"
-                        {...register(`stops.${index}.location.lat`, { valueAsNumber: true })}
-                        placeholder="42.8805"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Longitud</Label>
-                      <Input
-                        type="number"
-                        step="any"
-                        {...register(`stops.${index}.location.lng`, { valueAsNumber: true })}
-                        placeholder="-8.5456"
-                      />
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-
-            {/* Detalles del tour */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Detalles del tour</h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="duration">Duración</Label>
-                  <Input id="duration" {...register("duration")} placeholder="Ej: 2 horas" />
-                  {errors.duration && <p className="text-sm text-destructive">{errors.duration.message}</p>}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="price">Precio (€)</Label>
-                  <Input
-                    id="price"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    {...register("price.value", { valueAsNumber: true })}
-                    placeholder="0.00"
-                  />
-                  {errors.price?.value && <p className="text-sm text-destructive">{errors.price.value.message}</p>}
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="basedOnTips"
-                  checked={watch("price.basedOnTips")}
-                  onCheckedChange={(checked) => setValue("price.basedOnTips", checked as boolean)}
-                />
-                <Label htmlFor="basedOnTips">Basado en propinas</Label>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox id="showDiscount" checked={showDiscount} onCheckedChange={setShowDiscount} />
-                <Label htmlFor="showDiscount">Añadir descuento</Label>
-              </div>
-
-              {showDiscount && (
-                <Card className="p-4">
-                  <h4 className="font-medium mb-4">Configuración de descuento</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Tipo de descuento</Label>
-                      <Select
-                        onValueChange={(value) => setValue("price.discount.type", value as "porcentaje" | "valor")}
-                        defaultValue={watch("price.discount.type")}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecciona tipo" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="porcentaje">Porcentaje</SelectItem>
-                          <SelectItem value="valor">Valor fijo</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Cantidad</Label>
-                      <Input
-                        type="number"
-                        {...register("price.discount.amount", { valueAsNumber: true })}
-                        placeholder={watch("price.discount.type") === "porcentaje" ? "10" : "5.00"}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Descripción</Label>
-                      <Input
-                        {...register("price.discount.description")}
-                        placeholder="Ej: Descuento por reserva anticipada"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Válido desde</Label>
-                      <Input type="date" {...register("price.discount.validFrom")} />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Válido hasta</Label>
-                      <Input type="date" {...register("price.discount.validTo")} />
-                    </div>
-                  </div>
-                </Card>
+          <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="title">Título</Label>
+              <Input
+                id="title"
+                {...register("title")}
+                placeholder="Ej: Tour por el casco histórico"
+              />
+              {errors.title && (
+                <p className="text-sm text-destructive">
+                  {errors.title.message}
+                </p>
               )}
             </div>
 
-            {/* Idiomas */}
+            <div className="space-y-2">
+              <Label htmlFor="category">Categoría</Label>
+              <Select
+                onValueChange={(value) => setValue("category", value)}
+                defaultValue={watch("category")}
+              >
+                <SelectTrigger className="bg-white">
+                  <SelectValue placeholder="Selecciona una categoría" />
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  {CATEGORIES.map((category) => (
+                    <SelectItem
+                      key={category}
+                      value={category}
+                      className="bg-white"
+                    >
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.category && (
+                <p className="text-sm text-destructive">
+                  {errors.category.message}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Descripción</Label>
+              <Textarea
+                id="description"
+                {...register("description")}
+                placeholder="Describe tu tour en detalle"
+                className="min-h-[120px]"
+              />
+              {errors.description && (
+                <p className="text-sm text-destructive">
+                  {errors.description.message}
+                </p>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="duration">Duración</Label>
+                <Input
+                  id="duration"
+                  {...register("duration")}
+                  placeholder="Ej: 2 horas"
+                />
+                {errors.duration && (
+                  <p className="text-sm text-destructive">
+                    {errors.duration.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="price">Precio (€)</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  {...register("price.value", { valueAsNumber: true })}
+                  placeholder="0.00"
+                />
+                {errors.price?.value && (
+                  <p className="text-sm text-destructive">
+                    {errors.price.value.message}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="meetingPoint">Punto de encuentro</Label>
+              <Input
+                id="meetingPoint"
+                {...register("meetingPoint")}
+                placeholder="Ej: Plaza Mayor, junto a la estatua"
+              />
+              {errors.meetingPoint && (
+                <p className="text-sm text-destructive">
+                  {errors.meetingPoint.message}
+                </p>
+              )}
+            </div>
+
             <div className="space-y-2">
               <Label>Idiomas</Label>
+              <Popover
+                open={languagePopoverOpen}
+                onOpenChange={setLanguagePopoverOpen}
+              >
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={languagePopoverOpen}
+                    className="w-full justify-between"
+                  >
+                    {selectedLanguages.length > 0
+                      ? `${selectedLanguages.length} idioma${
+                        selectedLanguages.length > 1 ? "s" : ""
+                      } seleccionado${
+                        selectedLanguages.length > 1 ? "s" : ""
+                      }`
+                      : "Selecciona idiomas"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0">
+                  <Command>
+                    <CommandInput placeholder="Buscar idioma..." />
+                    <CommandList>
+                      <CommandEmpty>No se encontraron resultados.</CommandEmpty>
+                      <CommandGroup>
+                        {LANGUAGES.map((language) => (
+                          <CommandItem
+                            key={language}
+                            value={language}
+                            onSelect={() => toggleLanguage(language)}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedLanguages.includes(language)
+                                  ? "opacity-100"
+                                  : "opacity-0"
+                              )}
+                            />
+                            {language}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
 
               {selectedLanguages.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-3">
+                <div className="flex flex-wrap gap-2 mt-2">
                   {selectedLanguages.map((language) => (
-                    <Badge key={language} variant="secondary" className="flex items-center gap-1">
+                    <Badge
+                      key={language}
+                      variant="secondary"
+                      className="flex items-center gap-1"
+                    >
                       {language}
                       <button
                         type="button"
@@ -501,109 +602,13 @@ export function TourForm({ initialData, onSubmit, isSubmitting, isEditing = fals
                 </div>
               )}
 
-              <div className="flex flex-wrap gap-2 mb-3">
-                {unselectedLanguages.map((language) => (
-                  <Badge
-                    key={language}
-                    variant="outline"
-                    className="flex items-center gap-1 cursor-pointer hover:bg-secondary hover:text-secondary-foreground transition-colors"
-                    onClick={() => toggleLanguage(language)}
-                  >
-                    <Plus className="h-3 w-3 mr-1" />
-                    {language}
-                  </Badge>
-                ))}
-              </div>
-
-              <Popover open={languagePopoverOpen} onOpenChange={setLanguagePopoverOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={languagePopoverOpen}
-                    className="w-full justify-between"
-                  >
-                    {selectedLanguages.length > 0
-                      ? `${selectedLanguages.length} idioma${selectedLanguages.length > 1 ? "s" : ""} seleccionado${
-                        selectedLanguages.length > 1 ? "s" : ""
-                      }`
-                      : "Buscar idiomas"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-full p-0">
-                  <Command>
-                    <CommandInput placeholder="Buscar idioma..." />
-                    <CommandList>
-                      <CommandEmpty>No se encontraron resultados.</CommandEmpty>
-                      <CommandGroup>
-                        {LANGUAGES.map((language) => (
-                          <CommandItem key={language} value={language} onSelect={() => toggleLanguage(language)}>
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                selectedLanguages.includes(language) ? "opacity-100" : "opacity-0",
-                              )}
-                            />
-                            {language}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-
-              {errors.language && <p className="text-sm text-destructive">{errors.language.message}</p>}
+              {errors.language && (
+                <p className="text-sm text-destructive">
+                  {errors.language.message}
+                </p>
+              )}
             </div>
 
-            {/* Fechas no disponibles */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <Calendar className="h-5 w-5" />
-                  Fechas no disponibles
-                </h3>
-                <Button type="button" onClick={addNonAvailableDate} variant="outline" size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Añadir fecha
-                </Button>
-              </div>
-
-              {dateFields.map((field, index) => (
-                <Card key={field.id} className="p-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <h4 className="font-medium">Fecha no disponible {index + 1}</h4>
-                    <Button type="button" onClick={() => removeDate(index)} variant="outline" size="sm">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Fecha</Label>
-                      <Input type="date" {...register(`nonAvailableDates.${index}.date`)} />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Horas no disponibles (separadas por comas)</Label>
-                      <Input
-                        {...register(`nonAvailableDates.${index}.hours`)}
-                        placeholder="Ej: 09:00, 14:00, 18:00"
-                        onChange={(e) => {
-                          const hours = e.target.value
-                            .split(",")
-                            .map((h) => h.trim())
-                            .filter((h) => h)
-                          setValue(`nonAvailableDates.${index}.hours`, hours)
-                        }}
-                      />
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-
-            {/* Imágenes */}
             <div className="space-y-2">
               <Label htmlFor="images">Imágenes</Label>
 
@@ -615,8 +620,8 @@ export function TourForm({ initialData, onSubmit, isSubmitting, isEditing = fals
                         src={preview || "/placeholder.svg"}
                         alt={`Vista previa ${index + 1}`}
                         className="h-24 w-full object-cover rounded-md"
-                        width={100}
-                        height={100}
+                        width={200}
+                        height={200}
                       />
                       <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity rounded-md flex items-center justify-center">
                         <button
@@ -642,12 +647,20 @@ export function TourForm({ initialData, onSubmit, isSubmitting, isEditing = fals
                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
                       <Upload className="w-8 h-8 mb-2 text-muted-foreground" />
                       <p className="mb-2 text-sm text-muted-foreground">
-                        <span className="font-semibold">Haz clic para seleccionar imágenes</span> o arrastra y suelta
+                        <span className="font-semibold">
+                          Haz clic para seleccionar imágenes
+                        </span>{" "}
+                        o arrastra y suelta
                       </p>
-                      <p className="text-xs text-muted-foreground">PNG, JPG o WEBP (MAX. 10MB)</p>
+                      <p className="text-xs text-muted-foreground">
+                        PNG, JPG o WEBP (MAX. 10MB)
+                      </p>
                       {imagePreviews.length > 0 && (
                         <p className="text-xs text-muted-foreground mt-1">
-                          {imagePreviews.length} {imagePreviews.length === 1 ? "imagen subida" : "imágenes subidas"}
+                          {imagePreviews.length}{" "}
+                          {imagePreviews.length === 1
+                            ? "imagen subida"
+                            : "imágenes subidas"}
                         </p>
                       )}
                     </div>
@@ -669,16 +682,17 @@ export function TourForm({ initialData, onSubmit, isSubmitting, isEditing = fals
                     variant="outline"
                     className="w-full"
                     onClick={() => {
-                      setImageFiles([])
+                      // Limpiar todas las imágenes
+                      setImageFiles([]);
                       setImagePreviews((prev) => {
-                        prev.forEach((url) => URL.revokeObjectURL(url))
-                        return []
-                      })
-                      setValue("images", [])
+                        prev.forEach((url) => URL.revokeObjectURL(url));
+                        return [];
+                      });
+                      setValue("images", []);
                       toast({
                         title: "Imágenes eliminadas",
                         description: "Todas las imágenes han sido eliminadas",
-                      })
+                      });
                     }}
                   >
                     Eliminar todas las imágenes
@@ -686,15 +700,24 @@ export function TourForm({ initialData, onSubmit, isSubmitting, isEditing = fals
                 )}
               </div>
 
-              {errors.images && <p className="text-sm text-destructive">{errors.images.message}</p>}
+              {errors.images && (
+                <p className="text-sm text-destructive">
+                  {errors.images.message}
+                </p>
+              )}
             </div>
 
             <div className="flex justify-end gap-4 pt-4">
-              <Button type="button" variant="outline" onClick={() => window.history.back()} disabled={isSubmitting}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => router.back()}
+                disabled={isSubmittingState}
+              >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? (
+              <Button type="submit" disabled={isSubmittingState}>
+                {isSubmittingState ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     {isEditing ? "Guardando..." : "Creando..."}
@@ -709,6 +732,48 @@ export function TourForm({ initialData, onSubmit, isSubmitting, isEditing = fals
           </form>
         </CardContent>
       </Card>
+
+      <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirmar imagen</DialogTitle>
+          </DialogHeader>
+
+          {pendingImages.length > 0 &&
+            currentImageIndex < pendingImages.length && (
+              <div className="flex flex-col items-center space-y-4">
+                <div className="relative w-full h-64 bg-muted rounded-md overflow-hidden">
+                  <Image
+                    src={
+                      pendingImages[currentImageIndex].url || "/placeholder.svg"
+                    }
+                    alt="Vista previa de imagen"
+                    className="w-full h-full object-contain"
+                    width={400}
+                    height={400}
+                  />
+                </div>
+
+                <div className="text-center text-sm text-muted-foreground">
+                  Imagen {currentImageIndex + 1} de {pendingImages.length}
+                </div>
+
+                <div className="flex justify-center gap-4 w-full">
+                  <Button variant="outline" onClick={rejectCurrentImage}>
+                    Rechazar
+                  </Button>
+                  <Button onClick={confirmCurrentImage}>Aceptar y subir</Button>
+                </div>
+              </div>
+            )}
+
+          <DialogFooter className="sm:justify-start">
+            <Button variant="secondary" onClick={closeImageDialog}>
+              Cancelar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
-  )
+  );
 }

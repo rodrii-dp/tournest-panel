@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../co
 import { Label } from "../components/ui/label"
 import { login } from "@/lib/auth"
 import {userService} from "@/lib/userService";
+import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter()
@@ -59,10 +60,16 @@ export default function LoginPage() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Iniciando sesión..." : "Iniciar sesión"}
             </Button>
+
+            <div className="text-center text-sm">
+              <span className="text-gray-600">¿No tienes cuenta? </span>
+              <Link href="/login" className="text-blue-600 hover:underline">
+                Regístrate como proveedor
+              </Link>
+            </div>
           </form>
         </CardContent>
       </Card>
     </div>
   )
 }
-

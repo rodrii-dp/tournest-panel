@@ -1,7 +1,7 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 
 export const apiClient = axios.create({
-  baseURL: 'http://localhost:3000',
+  baseURL: 'https://hollow-lucretia-rodrigo-de-prat-9197ad55.koyeb.app/',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -42,7 +42,7 @@ apiClient.interceptors.response.use(
         }
 
         // Solicitar un nuevo access_token
-        const { data } = await axios.post('http://10.0.2.2:3000/auth/refresh', {
+        const { data } = await apiClient.post('/auth/refresh', {
           refresh_token: refreshToken,
         });
 
@@ -55,13 +55,16 @@ apiClient.interceptors.response.use(
       } catch (refreshError) {
         console.error('Error al refrescar el token:', refreshError);
 
-        if (
-          refreshError.response?.status === 401 ||
-          refreshError.response?.status === 403
-        ) {
-          // Si el refresh token es inválido, eliminar ambos tokens
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('refresh_token');
+        // Type guard to check if refreshError is an AxiosError
+        if (axios.isAxiosError(refreshError)) {
+          if (
+            refreshError.response?.status === 401 ||
+            refreshError.response?.status === 403
+          ) {
+            // Si el refresh token es inválido, eliminar ambos tokens
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+          }
         }
       }
     }

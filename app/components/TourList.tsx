@@ -20,12 +20,7 @@ import Image from "next/image";
 import {Tour} from "@/types";
 import {tourService} from "@/lib/tourService";
 
-async function getTours() {
-  return tourService.getTours();
-}
-
-export default async function TourList() {
-  const tours = await getTours();
+export default function TourList({tours}: {tours: Tour[]}) {
 
   return (
     <Card className="bg-white">
