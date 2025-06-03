@@ -54,15 +54,11 @@ import { use } from "react";
 import {tourService} from "@/lib/tourService";
 
 const CATEGORIES = [
-  "Cultural",
-  "Gastronómico",
-  "Histórico",
-  "Aventura",
-  "Naturaleza",
-  "Arquitectónico",
-  "Artístico",
-  "Nocturno",
-  "Familiar",
+  "gastronomía",
+  "historia",
+  "naturaleza",
+  "aventura",
+  "otros",
 ];
 
 const LANGUAGES = [
@@ -492,7 +488,7 @@ export default function TourForm({ params, initialData, onSubmit, isSubmitting: 
                       value={category}
                       className="bg-white"
                     >
-                      {category}
+                      {category[0].toUpperCase() + category.slice(1)}
                     </SelectItem>
                   ))}
                 </SelectContent>
