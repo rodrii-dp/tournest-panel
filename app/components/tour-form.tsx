@@ -168,9 +168,6 @@ export default function TourForm({ params, initialData, onSubmit, isSubmitting: 
   const [internalIsSubmitting, setInternalIsSubmitting] = useState(false);
   const isSubmittingState = isExternalMode ? (externalIsSubmitting ?? false) : internalIsSubmitting;
 
-  const [selectedLanguages, setSelectedLanguages] = useState<string[]>(
-    initialData?.language || []
-  );
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [languagePopoverOpen, setLanguagePopoverOpen] = useState(false);
@@ -242,7 +239,6 @@ export default function TourForm({ params, initialData, onSubmit, isSubmitting: 
             language: tourData.language,
           });
 
-          setSelectedLanguages(tourData.language);
         } catch (error) {
           console.error("Error fetching tour:", error);
           toast({
@@ -349,15 +345,10 @@ export default function TourForm({ params, initialData, onSubmit, isSubmitting: 
   };
 
   const toggleLanguage = (language: string) => {
-    setSelectedLanguages((current) => {
-      const updated = current.includes(language)
-        ? current.filter((l) => l !== language)
-        : [...current, language];
-
-      // Update form value
-      setValue("language", updated);
-      return updated;
-    });
+    const updated = watchedLanguages.includes(language)
+      ? watchedLanguages.filter((l) => l !== language)
+      : [...watchedLanguages, language];
+    setValue("language", updated, { shouldValidate: true });
   };
 
   const handleFormSubmit = async (data: TourFormValues) => {
@@ -590,11 +581,11 @@ export default function TourForm({ params, initialData, onSubmit, isSubmitting: 
                     aria-expanded={languagePopoverOpen}
                     className="w-full justify-between"
                   >
-                    {selectedLanguages.length > 0
-                      ? `${selectedLanguages.length} idioma${
-                        selectedLanguages.length > 1 ? "s" : ""
+                    {watchedLanguages.length > 0
+                      ? `${watchedLanguages.length} idioma${
+                        watchedLanguages.length > 1 ? "s" : ""
                       } seleccionado${
-                        selectedLanguages.length > 1 ? "s" : ""
+                        watchedLanguages.length > 1 ? "s" : ""
                       }`
                       : "Selecciona idiomas"}
                   </Button>
@@ -614,7 +605,7 @@ export default function TourForm({ params, initialData, onSubmit, isSubmitting: 
                             <Check
                               className={cn(
                                 "mr-2 h-4 w-4",
-                                selectedLanguages.includes(language)
+                                watchedLanguages.includes(language)
                                   ? "opacity-100"
                                   : "opacity-0"
                               )}
@@ -628,9 +619,9 @@ export default function TourForm({ params, initialData, onSubmit, isSubmitting: 
                 </PopoverContent>
               </Popover>
 
-              {selectedLanguages.length > 0 && (
+              {watchedLanguages.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {selectedLanguages.map((language) => (
+                  {watchedLanguages.map((language) => (
                     <Badge
                       key={language}
                       variant="secondary"
