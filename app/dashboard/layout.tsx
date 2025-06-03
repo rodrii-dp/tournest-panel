@@ -41,7 +41,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
           </div>
 
-          <nav className="flex-1 p-4 space-y-1">º
+          <nav className="flex-1 p-4 space-y-1">
             <Link href="/dashboard">
               <Button variant="ghost" className="w-full justify-start text-gray-700 hover:text-[#FF5A5F] hover:bg-[#FFE8E8]">
                 Dashboard

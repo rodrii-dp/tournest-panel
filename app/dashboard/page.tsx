@@ -13,7 +13,17 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    tourService.getTours()
+    const storedProvider = typeof window !== "undefined" ? localStorage.getItem("provider") : null;
+    const provider = storedProvider ? JSON.parse(storedProvider) : null;
+    const providerId = provider?._id;
+
+    if (!providerId) {
+      setTours([]);
+      setLoading(false);
+      return;
+    }
+
+    tourService.getTours({ providerId })
       .then(setTours)
       .catch(console.error)
       .finally(() => setLoading(false));

@@ -27,6 +27,9 @@ export const userService = {
     if (response.data.user) {
       localStorage.setItem('user', JSON.stringify(response.data.user));
     }
+    if (response.data.provider) {
+      localStorage.setItem('provider', JSON.stringify(response.data.provider));
+    }
     return response.data
   },
 };
