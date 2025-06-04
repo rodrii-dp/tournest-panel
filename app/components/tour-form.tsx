@@ -310,8 +310,10 @@ export default function TourForm({ params, initialData, onSubmit, isSubmitting: 
   };
 
   const closeImageDialog = () => {
+    // Solo revocar las URLs de las imágenes pendientes que NO han sido aceptadas
     pendingImages.forEach((img, index) => {
-      if (index >= currentImageIndex) {
+      // Si la URL no está en imagePreviews, se puede revocar
+      if (!imagePreviews.includes(img.url) && index >= currentImageIndex) {
         URL.revokeObjectURL(img.url);
       }
     });
@@ -362,17 +364,28 @@ export default function TourForm({ params, initialData, onSubmit, isSubmitting: 
         console.log("HELLO");
         const uploadedImageUrls = [];
 
+        // Validar configuración de Cloudinary antes de subir imágenes
+        const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+        const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
+
+        if ((data.images && data.images.length > 0) && (!cloudName || !uploadPreset)) {
+          toast({
+            title: "Error de configuración",
+            description: "Faltan las variables de entorno de Cloudinary. Por favor, configura NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME y NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET.",
+            variant: "destructive",
+          });
+          setInternalIsSubmitting(false);
+          return;
+        }
+
         if (data.images && data.images.length > 0) {
           for (const file of data.images) {
             const formData = new FormData();
             formData.append("file", file);
-            formData.append(
-              "upload_preset",
-              process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "ml_default"
-            );
+            formData.append("upload_preset", uploadPreset!);
 
             const response = await fetch(
-              `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+              `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
               {
                 method: "POST",
                 body: formData,
