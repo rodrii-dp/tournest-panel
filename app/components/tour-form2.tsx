@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState } from 'react';
 import { Plus, X, MapPin, Calendar, Euro, Tag } from 'lucide-react';
 import type { Tour, Stop, Availability } from "@/types";
