@@ -3,8 +3,7 @@
 import type React from "react"
 import { useFieldArray } from "react-hook-form"
 import { Plus } from "lucide-react"
-import { useEffect, useState, useRef } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useRef } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -22,8 +21,6 @@ import { Badge } from "../components/ui/badge"
 import { cn } from "@/lib/utils"
 import { toast } from "../components/ui/use-toast"
 import Image from "next/image"
-import { use } from "react"
-import { tourService } from "@/lib/tourService"
 
 const CATEGORIES = ["gastronomía", "historia", "naturaleza", "aventura", "otros"]
 
@@ -45,7 +42,8 @@ const tourSchema = z.object({
         validFrom: z.string().optional(),
         validTo: z.string().optional(),
       })
-      .optional(),
+      .optional()
+      .nullable(),
   }),
   meetingPoint: z.string().min(1, "El punto de encuentro es requerido"),
   language: z.array(z.string()).min(1, "Debes seleccionar al menos un idioma"),
@@ -84,12 +82,6 @@ interface ImagePreview {
 }
 
 interface TourFormProps {
-  // Pattern 1: Simple usage with params (existing)
-  params?: Promise<{
-    action: string
-  }>
-
-  // Pattern 2: Complex usage with external state management (new)
   initialData?: {
     category: string
     title: string
@@ -114,19 +106,9 @@ interface TourFormProps {
   isSubmitting?: boolean
 }
 
-export default function TourForm({ params, initialData, onSubmit, isSubmitting: externalIsSubmitting }: TourFormProps) {
-  const router = useRouter()
-
-  // Determine which pattern is being used
-  const isExternalMode = !params && (initialData !== undefined || onSubmit !== undefined)
-
-  // Handle params resolution only if params is provided
-  const resolvedParams = params ? use(params) : null
-  const isEditing = isExternalMode ? !!initialData : resolvedParams?.action !== "new"
-
-  // Use external isSubmitting if provided, otherwise use internal state
+export default function TourForm({ initialData, onSubmit, isSubmitting: externalIsSubmitting }: TourFormProps) {
   const [internalIsSubmitting, setInternalIsSubmitting] = useState(false)
-  const isSubmittingState = isExternalMode ? (externalIsSubmitting ?? false) : internalIsSubmitting
+  const isSubmittingState = externalIsSubmitting ?? internalIsSubmitting
 
   const [imageFiles, setImageFiles] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
@@ -183,68 +165,6 @@ export default function TourForm({ params, initialData, onSubmit, isSubmitting: 
   })
 
   const watchedLanguages = watch("language")
-
-  // Only run this effect in internal mode (when params is provided)
-  useEffect(() => {
-    if (!isExternalMode && isEditing && resolvedParams) {
-      const fetchTour = async () => {
-        try {
-          const response = await fetch(`/api/tours/${resolvedParams.action}`)
-          if (!response.ok) throw new Error("No se pudo cargar el tour")
-
-          const tourData = await response.json()
-
-          reset({
-            title: tourData.title,
-            category: tourData.category,
-            description: tourData.description,
-            duration: tourData.duration,
-            price: {
-              value: tourData.price.value,
-              basedOnTips: tourData.price.basedOnTips,
-            },
-            meetingPoint: tourData.meetingPoint,
-            language: tourData.language,
-          })
-        } catch (error) {
-          console.error("Error fetching tour:", error)
-          toast({
-            title: "Error",
-            description: "No se pudo cargar la información del tour",
-            variant: "destructive",
-          })
-        }
-      }
-
-      fetchTour()
-    }
-  }, [isExternalMode, isEditing, resolvedParams, reset])
-
-  useEffect(() => {
-    if (isExternalMode && initialData) {
-      // Si hay imágenes en initialData, solo las usamos para previsualización
-      if (initialData.images && initialData.images.length > 0) {
-        setImagePreviews(initialData.images.map(img => img.imageUrl))
-        setImageFiles([])
-        setValue("images", [])
-      }
-      // Resetear el formulario con los datos iniciales (sin images)
-      reset({
-        title: initialData.title || "",
-        category: initialData.category || "",
-        description: initialData.description || "",
-        duration: initialData.duration || "",
-        price: {
-          value: initialData.price?.value || 0,
-          basedOnTips: initialData.price?.basedOnTips || false,
-        },
-        meetingPoint: initialData.meetingPoint || "",
-        language: initialData.language || [],
-        location: { name: "", country: "" },
-        images: [],
-      })
-    }
-  }, [isExternalMode, initialData, reset, setValue])
 
   // Handle file selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -345,113 +265,25 @@ export default function TourForm({ params, initialData, onSubmit, isSubmitting: 
   }
 
   const handleFormSubmit = async (data: TourFormValues) => {
-    if (isExternalMode && onSubmit) {
+    if (onSubmit) {
       // External mode: use the provided onSubmit function
       await onSubmit({
         ...data,
         images: data.images || [],
       })
     } else {
-      // Internal mode: use existing submission logic
+      // Demo mode: just show the data
       setInternalIsSubmitting(true)
 
-      try {
-        console.log("HELLO")
-        const uploadedImageUrls = []
-
-        // Validar configuración de Cloudinary antes de subir imágenes
-        const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
-        const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
-
-        if (data.images && data.images.length > 0 && (!cloudName || !uploadPreset)) {
-          toast({
-            title: "Error de configuración",
-            description:
-              "Faltan las variables de entorno de Cloudinary. Por favor, configura NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME y NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET.",
-            variant: "destructive",
-          })
-          setInternalIsSubmitting(false)
-          return
-        }
-
-        if (data.images && data.images.length > 0) {
-          for (const file of data.images) {
-            const formData = new FormData()
-            formData.append("file", file)
-            formData.append("upload_preset", uploadPreset!)
-
-            const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
-              method: "POST",
-              body: formData,
-            })
-
-            if (!response.ok) {
-              throw new Error("Error al subir una imagen a Cloudinary")
-            }
-
-            const result = await response.json()
-            uploadedImageUrls.push(result.secure_url)
-          }
-        }
-
-        const discount =
-          data.price.discount &&
-          data.price.discount.type &&
-          typeof data.price.discount.amount === "number" &&
-          data.price.discount.amount > 0
-            ? {
-              type: data.price.discount.type,
-              amount: data.price.discount.amount,
-              description: data.price.discount.description || "",
-              validFrom: data.price.discount.validFrom || "",
-              validTo: data.price.discount.validTo || "",
-            }
-            : undefined
-
-        const tourData = {
-          title: data.title,
-          category: data.category,
-          description: data.description,
-          duration: data.duration,
-          price: {
-            value: data.price.value,
-            basedOnTips: data.price.basedOnTips ?? false,
-            ...(discount ? { discount } : {}),
-          },
-          meetingPoint: data.meetingPoint,
-          language: data.language,
-          location: data.location,
-          stops: data.stops,
-          nonAvailableDates: data.nonAvailableDates?.map((item) => ({
-            date: item.date,
-            hours: item.hours ?? [],
-          })),
-          images: uploadedImageUrls.map((url) => ({ imageUrl: url })), // URLs de Cloudinary
-        }
-
-        if (isEditing && resolvedParams) {
-          await tourService.updateTour(resolvedParams.action, "", tourData)
-        } else {
-          await tourService.createTour(tourData)
-        }
-
+      // Simulate API call
+      setTimeout(() => {
+        console.log("Form data:", data)
         toast({
           title: "Éxito",
-          description: isEditing ? "Tour actualizado correctamente" : "Tour creado correctamente",
+          description: "Tour creado correctamente (modo demo)",
         })
-
-        router.push("/dashboard")
-        router.refresh()
-      } catch (error) {
-        console.error("Error:", error)
-        toast({
-          title: "Error",
-          description: "No se pudo guardar el tour. Inténtalo de nuevo.",
-          variant: "destructive",
-        })
-      } finally {
         setInternalIsSubmitting(false)
-      }
+      }, 2000)
     }
   }
 
@@ -459,7 +291,7 @@ export default function TourForm({ params, initialData, onSubmit, isSubmitting: 
     <>
       <Card className="w-full max-w-4xl mx-auto">
         <CardHeader>
-          <CardTitle>{isEditing ? "Editar Tour" : "Nuevo Tour"}</CardTitle>
+          <CardTitle>Nuevo Tour</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
@@ -501,7 +333,7 @@ export default function TourForm({ params, initialData, onSubmit, isSubmitting: 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="duration">Duración</Label>
-                <Input id="duration" {...register("duration")} />
+                <Input id="duration" {...register("duration")} placeholder="Ej: 2 horas" />
                 {errors.duration && <p className="text-sm text-destructive">{errors.duration.message}</p>}
               </div>
               <div className="space-y-2">
@@ -511,11 +343,13 @@ export default function TourForm({ params, initialData, onSubmit, isSubmitting: 
                   type="number"
                   min="0"
                   step="0.01"
+                  placeholder="25.00"
                   {...register("price.value", { valueAsNumber: true })}
                 />
                 {errors.price?.value && <p className="text-sm text-destructive">{errors.price.value.message}</p>}
               </div>
             </div>
+
             {/* Descuento */}
             <div className="space-y-2">
               <Label>Descuento</Label>
@@ -621,7 +455,12 @@ export default function TourForm({ params, initialData, onSubmit, isSubmitting: 
                 <Input placeholder="Ciudad" {...register("location.name")} />
                 <Input placeholder="País" {...register("location.country")} />
               </div>
+              {errors.location?.name && <p className="text-sm text-destructive">{errors.location.name.message}</p>}
+              {errors.location?.country && (
+                <p className="text-sm text-destructive">{errors.location.country.message}</p>
+              )}
             </div>
+
             {/* Paradas */}
             <div className="space-y-2">
               <Label>Paradas</Label>
@@ -653,13 +492,6 @@ export default function TourForm({ params, initialData, onSubmit, isSubmitting: 
               >
                 <Plus className="h-4 w-4 mr-1" /> Añadir parada
               </Button>
-              {errors.stops && (
-                <p className="text-sm text-destructive">
-                  {Array.isArray(errors.stops)
-                    ? errors.stops.map((err, i) => err?.message && <span key={i}>{err.message}</span>)
-                    : (errors.stops as { message?: string })?.message}
-                </p>
-              )}
             </div>
 
             <div className="space-y-2">
@@ -679,11 +511,6 @@ export default function TourForm({ params, initialData, onSubmit, isSubmitting: 
               <Button type="button" variant="outline" onClick={() => appendNonAvailable({ date: "", hours: [] })}>
                 <Plus className="h-4 w-4 mr-1" /> Añadir fecha no disponible
               </Button>
-              {errors.nonAvailableDates && (
-                <p className="text-sm text-destructive">
-                  {(errors.nonAvailableDates as { message?: string })?.message}
-                </p>
-              )}
             </div>
 
             <div className="space-y-2">
@@ -773,17 +600,15 @@ export default function TourForm({ params, initialData, onSubmit, isSubmitting: 
             </div>
 
             <div className="flex justify-end gap-4 pt-4">
-              <Button type="button" variant="outline" onClick={() => router.back()} disabled={isSubmittingState}>
+              <Button type="button" variant="outline" disabled={isSubmittingState}>
                 Cancelar
               </Button>
               <Button type="submit" disabled={isSubmittingState}>
                 {isSubmittingState ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {isEditing ? "Guardando..." : "Creando..."}
+                    Creando...
                   </>
-                ) : isEditing ? (
-                  "Guardar cambios"
                 ) : (
                   "Crear tour"
                 )}
