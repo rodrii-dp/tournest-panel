@@ -220,6 +220,32 @@ export default function TourForm({ params, initialData, onSubmit, isSubmitting: 
     }
   }, [isExternalMode, isEditing, resolvedParams, reset])
 
+  useEffect(() => {
+    if (isExternalMode && initialData) {
+      // Si hay imágenes en initialData, solo las usamos para previsualización
+      if (initialData.images && initialData.images.length > 0) {
+        setImagePreviews(initialData.images.map(img => img.imageUrl))
+        setImageFiles([])
+        setValue("images", [])
+      }
+      // Resetear el formulario con los datos iniciales (sin images)
+      reset({
+        title: initialData.title || "",
+        category: initialData.category || "",
+        description: initialData.description || "",
+        duration: initialData.duration || "",
+        price: {
+          value: initialData.price?.value || 0,
+          basedOnTips: initialData.price?.basedOnTips || false,
+        },
+        meetingPoint: initialData.meetingPoint || "",
+        language: initialData.language || [],
+        location: { name: "", country: "" },
+        images: [],
+      })
+    }
+  }, [isExternalMode, initialData, reset, setValue])
+
   // Handle file selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
