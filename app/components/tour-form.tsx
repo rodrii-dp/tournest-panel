@@ -368,7 +368,10 @@ export default function TourForm({ initialData, onSubmit, isSubmitting: external
                 <Input
                   type="number"
                   placeholder="Cantidad"
-                  {...register("price.discount.amount", { valueAsNumber: true })}
+                  {...register("price.discount.amount", {
+                    valueAsNumber: true,
+                    setValueAs: (v) => v === "" ? undefined : Number(v),
+                  })}
                 />
                 <Input placeholder="Descripción" {...register("price.discount.description")} />
               </div>
