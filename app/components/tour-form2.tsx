@@ -41,17 +41,8 @@ const CreateTourForm = () => {
   });
   const [newHour, setNewHour] = useState('');
 
-  const categories = [
-    'Turismo Cultural',
-    'Naturaleza y Aventura',
-    'Gastronomía',
-    'Historia',
-    'Arte y Museos',
-    'Deportes',
-    'Vida Nocturna',
-    'Compras',
-    'Familiar'
-  ];
+  const categories = ["gastronomía", "historia", "naturaleza", "aventura", "otros"]
+
 
   const languages = [
     'Español', 'Inglés', 'Francés', 'Alemán', 'Italiano',
