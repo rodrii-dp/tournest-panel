@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Plus, X, MapPin, Calendar, Euro, Tag } from 'lucide-react';
 import type { Tour, Stop, Availability } from "@/types";
+import {tourService} from "@/lib/tourService";
 
 const CreateTourForm = () => {
   // Estado del formulario tipado correctamente
@@ -257,7 +258,7 @@ const CreateTourForm = () => {
       console.log('Datos del tour a enviar:', tourData);
 
       // Llamar al servicio para crear el tour
-      // await tourService.createTour(tourData);
+      await tourService.createTour(tourData);
 
       alert('¡Tour creado exitosamente!');
       console.log('Tour creado con éxito:', tourData);
