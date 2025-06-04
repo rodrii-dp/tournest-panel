@@ -42,6 +42,7 @@ const tourSchema = z.object({
         validFrom: z.string().optional(),
         validTo: z.string().optional(),
       })
+      .partial()
       .optional()
       .nullable(),
   }),
