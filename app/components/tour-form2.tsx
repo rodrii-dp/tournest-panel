@@ -30,9 +30,18 @@ const CreateTourForm = () => {
 
   const [showDiscount, setShowDiscount] = useState(false);
   const [newLanguage, setNewLanguage] = useState('');
-  const [newStop, setNewStop] = useState<Stop>({
+  // Tipo auxiliar para el formulario de parada
+  interface StopForm {
+    stopName: string;
+    location: {
+      lat: string;
+      lng: string;
+      direction: string;
+    };
+  }
+  const [newStop, setNewStop] = useState<StopForm>({
     stopName: '',
-    location: { lat: 0, lng: 0, direction: '' }
+    location: { lat: '', lng: '', direction: '' }
   });
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -131,11 +140,18 @@ const CreateTourForm = () => {
     if (newStop.stopName.trim()) {
       setFormData(prev => ({
         ...prev,
-        stops: [...(prev.stops ?? []), { ...newStop }]
+        stops: [...(prev.stops ?? []), {
+          stopName: newStop.stopName,
+          location: {
+            lat: parseFloat(newStop.location.lat) || 0,
+            lng: parseFloat(newStop.location.lng) || 0,
+            direction: newStop.location.direction
+          }
+        }]
       }));
       setNewStop({
         stopName: '',
-        location: { lat: 0, lng: 0, direction: '' }
+        location: { lat: '', lng: '', direction: '' }
       });
     }
   };
@@ -667,7 +683,7 @@ const CreateTourForm = () => {
                   value={newStop.location.lat}
                   onChange={(e) => setNewStop(prev => ({
                     ...prev,
-                    location: { ...prev.location, lat: parseFloat(e.target.value) || 0 }
+                    location: { ...prev.location, lat: e.target.value }
                   }))}
                   placeholder="Latitud"
                   step="any"
@@ -680,7 +696,7 @@ const CreateTourForm = () => {
                   value={newStop.location.lng}
                   onChange={(e) => setNewStop(prev => ({
                     ...prev,
-                    location: { ...prev.location, lng: parseFloat(e.target.value) || 0 }
+                    location: { ...prev.location, lng: e.target.value }
                   }))}
                   placeholder="Longitud"
                   step="any"
