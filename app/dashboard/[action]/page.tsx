@@ -18,5 +18,5 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default function Page({ params }: PageProps) {
-  return <TourForm params={params} />;
+  return <TourForm />;
 }
