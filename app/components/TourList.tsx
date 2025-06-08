@@ -34,10 +34,6 @@ export default function TourList({tours}: {tours: Tour[]}) {
           <Plus className="mr-2 h-4 w-4" />
           Nuevo Tour
         </Link>
-        <a href="/dashboard/new-tour" className="bg-[#FF5A5F] hover:bg-[#E00007] flex items-center px-4 py-2 rounded text-white text-sm font-medium">
-          <Plus className="mr-2 h-4 w-4" />
-          Nuevo Tour2
-        </a>
         <button
           onClick={handleNewTour}
           className="bg-[#FF5A5F] hover:bg-[#E00007] flex items-center px-4 py-2 rounded text-white text-sm font-medium"
