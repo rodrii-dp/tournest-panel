@@ -18,8 +18,13 @@ import {
 import { DeleteTourButton } from "@/app/components/delete-tour-button";
 import Image from "next/image";
 import {Tour} from "@/types";
+import {useRouter} from "next/navigation";
 
 export default function TourList({tours}: {tours: Tour[]}) {
+  const router = useRouter();
+  const handleNewTour = () => {
+    router.push("/dashboard/new-tour");
+  };
 
   return (
     <Card className="bg-white">
@@ -29,6 +34,17 @@ export default function TourList({tours}: {tours: Tour[]}) {
           <Plus className="mr-2 h-4 w-4" />
           Nuevo Tour
         </Link>
+        <a href="/dashboard/new-tour" className="bg-[#FF5A5F] hover:bg-[#E00007] flex items-center px-4 py-2 rounded text-white text-sm font-medium">
+          <Plus className="mr-2 h-4 w-4" />
+          Nuevo Tour2
+        </a>
+        <button
+          onClick={handleNewTour}
+          className="bg-[#FF5A5F] hover:bg-[#E00007] flex items-center px-4 py-2 rounded text-white text-sm font-medium"
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Nuevo Tour3 (con handler)
+        </button>
       </CardHeader>
       <CardContent>
         <Table>
