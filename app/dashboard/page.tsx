@@ -72,7 +72,6 @@ export default function DashboardPage() {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Welcome Section */}
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Dashboard de {provider?.name || "Proveedor"}</h2>
           <p className="text-gray-600">Gestiona tus tours, reservas y configuración desde aquí</p>
@@ -142,6 +141,7 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
+          {/*
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
@@ -175,9 +175,10 @@ export default function DashboardPage() {
               </Link>
             </CardContent>
           </Card>
+          */}
         </div>
 
-        {/* Recent Activity */}
+        {/* Recent Activity
         <div className="mt-8">
           <Card>
             <CardHeader>
@@ -188,7 +189,7 @@ export default function DashboardPage() {
               <div className="text-center py-8 text-gray-500">No hay actividad reciente para mostrar</div>
             </CardContent>
           </Card>
-        </div>
+        </div>*/}
       </div>
     </div>
   )
