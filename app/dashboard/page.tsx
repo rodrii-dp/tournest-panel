@@ -136,7 +136,7 @@ export default function DashboardPage() {
               <CardDescription>Agrega un nuevo tour a tu catálogo</CardDescription>
             </CardHeader>
             <CardContent>
-              <Link href="/dashboard/tours/create">
+              <Link href="/dashboard/create">
                 <Button className="w-full">Crear Tour</Button>
               </Link>
             </CardContent>
