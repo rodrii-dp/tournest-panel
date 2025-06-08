@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Plus, X, MapPin, Calendar, Euro, Tag } from 'lucide-react';
-import type { Tour, Stop, Availability } from "@/types";
+import type { Tour, Availability } from "@/types";
 import {tourService} from "@/lib/tourService";
 
 const CreateTourForm = () => {
