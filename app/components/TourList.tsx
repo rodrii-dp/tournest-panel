@@ -25,12 +25,10 @@ export default function TourList({tours}: {tours: Tour[]}) {
     <Card className="bg-white">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-xl">Mis Tours</CardTitle>
-        <Button asChild className="bg-[#FF5A5F] hover:bg-[#E00007]">
-          <Link href="/dashboard/new-tour">
-            <Plus className="mr-2 h-4 w-4" />
-            Nuevo Tour
-          </Link>
-        </Button>
+        <Link href="/dashboard/new-tour" className="bg-[#FF5A5F] hover:bg-[#E00007] flex items-center px-4 py-2 rounded text-white text-sm font-medium">
+          <Plus className="mr-2 h-4 w-4" />
+          Nuevo Tour
+        </Link>
       </CardHeader>
       <CardContent>
         <Table>
