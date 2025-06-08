@@ -18,7 +18,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       }
     }
   })
-
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Menú lateral */}
