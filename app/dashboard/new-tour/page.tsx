@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import CreateTourForm from "../../components/tour-form2";
 
