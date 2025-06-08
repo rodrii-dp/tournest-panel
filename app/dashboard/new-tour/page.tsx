@@ -12,3 +12,4 @@ const CreateTourPage = () => {
 };
 
 export default CreateTourPage;
+

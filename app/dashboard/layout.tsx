@@ -17,7 +17,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         setUser(JSON.parse(storedUser));
       }
     }
-  })
+  }, []);
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Menú lateral */}
